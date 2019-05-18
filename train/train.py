@@ -2,14 +2,13 @@ import paddle.fluid as fluid
 import paddle
 import numpy as np
 from PIL import Image
-import Class_OS.o1_获得当前工作目录
 import paddle.dataset.mnist as mnist
 # 绘图
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import random
-from Class_PaddlePaddle.test03_Autoimg2.torNN import TorNN
+from train.torNN import TorNN
 
 # 参数表
 CLASS_NUM = 10  # 类别数目
@@ -17,7 +16,7 @@ PRE_IMG_NUM = 5  # 准备单类带标签图片数目
 LABEL_DIM = 3  # 分类维度，越高越精确
 
 # 指定路径
-path = Class_OS.o1_获得当前工作目录.main()
+path = './train/'
 params_dirname = path + "test02.inference.model"
 print("训练后文件夹路径" + params_dirname)
 # 参数初始化

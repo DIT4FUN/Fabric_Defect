@@ -1,15 +1,23 @@
-from PIL import Image
-import numpy as np
-from Class_PaddlePaddle.test03_Autoimg2.torNN import TorNN
+import os
 
-import Class_OS.o1_获得当前工作目录
+def file_name(file_dir):
+
+    for root, dirs, files in os.walk(file_dir):
+        print(root)  # 当前目录路径
+        print(dirs)  # 当前路径下所有子目录
+        print(files)  # 当前路径下所有非目录子文件
 
 
-q = [[0, 1, 1], [1, 2, 1], [2, 2, 2], [5, 4, 4], [4, 5, 5], [4, 5, 4], [9, 9, 9]]
 
-a = [[[1, 1, 1], [2, 1, 1], [2, 1, 2], [1, 1, 0]], [[4, 5, 5], [5, 4, 4], [4, 4, 4]]]
 
-obj = TorNN(q, a)
-print("metaNorm",obj.metaNorm())
-print("obj.p2meta",obj.p2meta())
-obj.classsify(expansion_rate=2,debug=True)
+
+def fileRead(path):
+    #a=os.listdir("./trainData")
+    filesL=[]
+    for root, dirs, files in os.walk(path):
+        filesL.append(files)
+    print("|找到",len(filesL)-1,"文件")
+    return filesL[1:]
+
+a=fileRead('./traindata')
+print(a)
