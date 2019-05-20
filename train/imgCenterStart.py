@@ -8,7 +8,7 @@ pathL=imgTool.readIMGInDir(imgPath)
 #处理图像
 for id,filePath in enumerate(pathL):
     #中心剪裁
-    img=imgTool.imgCentreCut(filePath,savePath='./trainData/centre/',detection=True)
+    img=imgTool.imgCentreCut(filePath,savePath='./trainData/centre',detection=True)
 
     if id %10==0:
         print(id,"/",len(pathL))

@@ -8,7 +8,7 @@ import cv2 as cv
 import numpy
 
 
-def readIMGInDir(path, type=None):
+def readIMGInDir(path, type=None,onle_name=False):
     '''
     读取文件夹下所有文件的文件名和路径
     :param path: 路径
@@ -17,12 +17,15 @@ def readIMGInDir(path, type=None):
     '''
     if type is None:
         type = '.jpg'
+
     nameL = []  # 保存文件名
     for root, dirs, files in os.walk(path):
         for file in files:
             if os.path.splitext(file)[1] == type:
-                nameL.append(str(os.path.join(root, file)).replace("\\", "/"))
-
+                if onle_name is True:
+                    nameL.append(str(file).replace("\\", "/"))
+                else:
+                    nameL.append(str(os.path.join(root, file)).replace("\\", "/"))
     return nameL
     # 其中os.path.splitext()函数将路径拆分为文件名+扩展名
 
@@ -40,7 +43,7 @@ def cannyPIL(img_cv_Obj):
     return image
 
 
-def imgCentreCut(filePath, savePath='./trainData/centre/', block_size=256, detection=False):
+def imgCentreCut(filePath, savePath='./trainData/centre', block_size=256, detection=False):
     '''
     图像中心裁剪，适用于布匹类型判断
     :param filePath: 图片路径
@@ -71,4 +74,4 @@ def imgCentreCut(filePath, savePath='./trainData/centre/', block_size=256, detec
         return cen_img
     else:
         # cen_img.save(savePath + fileName, 'png')
-        cv.imwrite(savePath + fileName, cen_img, [int(cv.IMWRITE_PNG_COMPRESSION), 9])
+        cv.imwrite(savePath +"/"+ fileName, cen_img, [int(cv.IMWRITE_PNG_COMPRESSION), 9])
