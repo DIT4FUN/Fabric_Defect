@@ -2,12 +2,7 @@ import paddle.fluid as fluid
 import paddle
 import numpy as np
 from PIL import Image
-import paddle.dataset.mnist as mnist
-# 绘图
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-import random
+
 from train.torNN import TorNN
 
 # 参数表
@@ -16,12 +11,11 @@ PRE_IMG_NUM = 5  # 准备单类带标签图片数目
 LABEL_DIM = 3  # 分类维度，越高越精确
 
 # 指定路径
-path = './train/'
-params_dirname = path + "test02.inference.model"
+path = './'
+params_dirname = path + "fabric.model"
 print("训练后文件夹路径" + params_dirname)
 # 参数初始化
 place = fluid.CUDAPlace(0)
-# place=fluid.CPUPlace()
 exe = fluid.Executor(place)
 
 # 加载数据
