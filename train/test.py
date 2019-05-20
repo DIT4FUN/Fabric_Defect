@@ -19,5 +19,3 @@ def fileRead(path):
     print("|找到",len(filesL)-1,"文件")
     return filesL[1:]
 
-a=fileRead('./traindata')
-print(a)
