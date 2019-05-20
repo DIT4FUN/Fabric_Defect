@@ -1,8 +1,8 @@
 import train.imgTool as imgTool
 import cv2 as cv
 
-#imgPath="./trainData/ori1/20181024"
-imgPath="./trainData/ori2"
+imgPath="./trainData/ori1/20181024"
+#imgPath="./trainData/ori2"
 #读取文件路径
 pathL=imgTool.readIMGInDir(imgPath)
 #处理图像
