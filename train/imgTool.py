@@ -17,7 +17,8 @@ def readIMGInDir(path, type=None,onle_name=False):
     '''
     if type is None:
         type = '.jpg'
-
+    else:
+        type="."+type
     nameL = []  # 保存文件名
     for root, dirs, files in os.walk(path):
         for file in files:
@@ -70,6 +71,9 @@ def imgCentreCut(filePath, savePath='./trainData/centre', block_size=256, detect
     if detection is True:
         # cen_img=cannyPIL(cen_img)
         cen_img = cv.Scharr(cen_img, -1, 1, 0)
+    cen_img=cen_img[:32,:32]
+
+
     if savePath is None:
         return cen_img
     else:

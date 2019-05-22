@@ -15,13 +15,20 @@ label2Key = {'T': '平纹',
              'S': '缎纹'}
 
 
-def getLabelID(labelKey, debug=False):
+def getDict():
+    return label1Key, label2Key
+
+
+def getLabelID(labelKey, debug=False, readID=False):
     '''
 
     :param labelKey: 标签字典
-    :return: 序号+字典Value的字典
+    readID:更换返回值
+    :return: 序号+字典Value的字典 更换后为字典Value+序号
     '''
-    labelID = [(id, i[1]) for id, i in enumerate(labelKey.items())]
+    labelID = [(id, i[0]) for id, i in enumerate(labelKey.items())]
+    if readID is True:
+        labelID = [(i[0], id) for id, i in enumerate(labelKey.items())]
     labelID = dict(labelID)
     if debug is True:
         print(labelID)
@@ -52,16 +59,36 @@ def readLabel(labelPath, debug=False):
     :param labelPath: Label路径
     :return:标签字典{ID:Label}
     '''
-    labelL=[]
-    txtxfileL=readTXTInDir(labelPath)
+    labelL = []
+    txtxfileL = readTXTInDir(labelPath)
+    key1 = getLabelID(label1Key, readID=True)
+    key2 = getLabelID(label2Key, readID=True)
     for i in txtxfileL:
-        id=i[:6]
-        with open(labelPath+"/"+i, "r") as f:
+        id = i[:6]
+        with open(labelPath + "/" + i, "r") as f:
             info = f.readlines()
             label = info[1].replace("\n", "")[1:3]
-            labelL.append((id,label))
-    labelL=dict(labelL)
+            try:
+                labelL.append((id, int(key1[label[0]]) + int(key2[label[1]])*10))
+            except:
+                continue
+    labelL = dict(labelL)
     if debug is True:
         print(labelL)
     return labelL
 
+#readLabel('./trainData/ori1/20181024_label',debug=True)
+
+def translateLabel(label):
+    '''
+
+    :param label: int标签
+    :return: str标签
+    '''
+    key1 = getLabelID(label1Key)
+    key2 = getLabelID(label2Key)
+    strLabel=label1Key[key1[int(label)%10]]+label2Key[key2[int(label)//10]]
+
+    return strLabel
+
+#print(translateLabel(4))
