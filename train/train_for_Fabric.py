@@ -15,7 +15,7 @@ place = fluid.CUDAPlace(0)
 IMG_CUT = False  # 图像是否预处理
 IMG_H = 32  # 输入网络图像大小
 IMG_W = 32
-TRAINNUM = 4  # 训练次数
+TRAINNUM = 20  # 训练次数
 READIMG=256 #每次读取图片数量
 # 指定路径
 path = './'
@@ -82,10 +82,9 @@ def vgg_bn_drop(input):
     conv1 = conv_block(input, 64, 2, [0.3, 0])
     conv2 = conv_block(conv1, 128, 2, [0.4, 0])
     conv3 = conv_block(conv2, 256, 3, [0.4, 0.4, 0])
-    conv4 = conv_block(conv3, 512, 3, [0.4, 0.4, 0])
-    conv5 = conv_block(conv4, 512, 3, [0.4, 0.4, 0])
 
-    drop = fluid.layers.dropout(x=conv5, dropout_prob=0.5)
+
+    drop = fluid.layers.dropout(x=conv3, dropout_prob=0.5)
     fc1 = fluid.layers.fc(input=drop, size=512, act=None)
     bn = fluid.layers.batch_norm(input=fc1, act='relu')
     drop2 = fluid.layers.dropout(x=bn, dropout_prob=0.5)
