@@ -31,7 +31,6 @@ print("原始图片文件夹路径" + imgPath)
 exe = fluid.Executor(place)
 
 # 加载数据
-datatype = 'float32'
 labelL = labelTool.readLabel(labelPath)  # 标签数据
 if IMG_CUT is True:
     imgpathL = imgTool.readIMGInDir(imgPath)
@@ -116,11 +115,11 @@ def convolutional_neural_network(img):
 
 
 # 新建项目
-final_program = fluid.Program()
+fabricProgram = fluid.Program()
 startup = fluid.Program()  # 默认启动程序
 
 # 编辑项目
-with fluid.program_guard(main_program=final_program, startup_program=startup):
+with fluid.program_guard(main_program=fabricProgram, startup_program=startup):
     x_f = fluid.layers.data(name="x_f", shape=[1, IMG_H, IMG_W], dtype='float32')
     label_f = fluid.layers.data(name="label_f", shape=[1], dtype="int64")
     #net_x = vgg_bn_drop(x_f)  # 获取网络
@@ -152,7 +151,7 @@ for train_num, i in enumerate(range(TRAINNUM)):
     for batch_id, data in enumerate(prebatch_reader()):
 
         # 获取训练数据
-        outs = exe.run(program=final_program,
+        outs = exe.run(program=fabricProgram,
                        feed=prefeeder.feed(data),
                        fetch_list=[label_f, avg_cost_Base_f,acc])
         if T is True:
@@ -172,4 +171,4 @@ plt.plot(PLT_train_num, PLT_acc)
 plt.title('布料识别指标-正确率')
 plt.xlabel('迭代次数')
 plt.show()
-fluid.io.save_inference_model(modelPath, [x_f.name], [net_x], exe,main_program=final_program)
+fluid.io.save_inference_model(modelPath, [x_f.name], [net_x], exe, main_program=fabricProgram)
