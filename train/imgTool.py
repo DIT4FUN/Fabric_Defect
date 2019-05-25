@@ -84,14 +84,13 @@ def imgCentreCut(filePath, savePath='./trainData/centre', block_size=256, detect
 
 class imgdetection:
     '''
-    图像预处理
+    瑕疵检测预处理
     '''
     # 原图，14倍下采样，10倍下采样，4.5倍下采样,2倍上采样
     opt = [1, 0.07, 0.1, 0.2, 2]
 
-    def __init__(self, imgFilePath, saveFilePath, opt=None):
+    def __init__(self, imgFilePath, opt=None):
         self.imgFilePath = imgFilePath
-        self.saveFilePath = saveFilePath
         self.img = cv.imread(imgFilePath, 0)
         if opt is not None:
             self.opt = opt
@@ -102,7 +101,7 @@ class imgdetection:
         :param size_num: 缩放倍数
         :return: cv对象
         '''
-        H, W, C = self.img.shape
+        H, W= self.img.shape
         img = cv.resize(self.img, (int(H * size_num), int(W * size_num)))
         return img
 
@@ -128,3 +127,7 @@ class imgdetection:
             imgL.append((i, img))
         imgL = dict(imgL)
         return imgL,self.opt
+
+a=imgdetection("./trainData/ori2/1.jpg")
+imgL,_=a.detection()
+cv.imwrite('./trainData/ori2/3.jpg',imgL[1])

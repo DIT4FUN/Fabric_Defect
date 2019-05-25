@@ -69,7 +69,7 @@ def readLabel(labelPath, debug=False):
             info = f.readlines()
             label = info[1].replace("\n", "")[1:3]
             try:
-                labelL.append((id, int(key1[label[0]]) + int(key2[label[1]])*10))
+                labelL.append((id, int(key1[label[0]]) + int(key2[label[1]]) * 10))
             except:
                 continue
     labelL = dict(labelL)
@@ -77,7 +77,8 @@ def readLabel(labelPath, debug=False):
         print(labelL)
     return labelL
 
-#readLabel('./trainData/ori1/20181024_label',debug=True)
+
+# readLabel('./trainData/ori1/20181024_label',debug=True)
 
 def translateLabel(label):
     '''
@@ -87,8 +88,8 @@ def translateLabel(label):
     '''
     key1 = getLabelID(label1Key)
     key2 = getLabelID(label2Key)
-    strLabel=label1Key[key1[int(label)%10]]+label2Key[key2[int(label)//10]]
+    strLabel = label1Key[key1[int(label) % 10]] + label2Key[key2[int(label) // 10]]
 
     return strLabel
 
-#print(translateLabel(4))
+# print(translateLabel(4))
