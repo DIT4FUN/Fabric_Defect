@@ -8,17 +8,17 @@ import cv2 as cv
 import numpy
 
 
-def readIMGInDir(path, type=None,onle_name=False):
+def readIMGInDir(path, type=None, onle_name=False):
     '''
     读取文件夹下所有文件的文件名和路径
     :param path: 路径
     type:指定文件类型，如果没有指定则视为jpg类型
-    :return: 文件夹内所有路径+文件名
+    :return: nameL:文件夹内所有路径+文件名 './trainData/ori1/20181024/000030_1_0.jpg' or '000030_1_0.jpg'
     '''
     if type is None:
         type = '.jpg'
     else:
-        type="."+type
+        type = "." + type
     nameL = []  # 保存文件名
     for root, dirs, files in os.walk(path):
         for file in files:
@@ -30,6 +30,8 @@ def readIMGInDir(path, type=None,onle_name=False):
     return nameL
     # 其中os.path.splitext()函数将路径拆分为文件名+扩展名
 
+
+# print(readIMGInDir("./trainData/"))
 
 def cannyPIL(img_cv_Obj):
     '''
@@ -71,11 +73,58 @@ def imgCentreCut(filePath, savePath='./trainData/centre', block_size=256, detect
     if detection is True:
         # cen_img=cannyPIL(cen_img)
         cen_img = cv.Scharr(cen_img, -1, 1, 0)
-    cen_img=cen_img[:32,:32]
-
+    cen_img = cen_img[:32, :32]
 
     if savePath is None:
         return cen_img
     else:
         # cen_img.save(savePath + fileName, 'png')
-        cv.imwrite(savePath +"/"+ fileName, cen_img, [int(cv.IMWRITE_PNG_COMPRESSION), 9])
+        cv.imwrite(savePath + "/" + fileName, cen_img, [int(cv.IMWRITE_PNG_COMPRESSION), 9])
+
+
+class imgdetection:
+    '''
+    图像预处理
+    '''
+    # 原图，14倍下采样，10倍下采样，4.5倍下采样,2倍上采样
+    opt = [1, 0.07, 0.1, 0.2, 2]
+
+    def __init__(self, imgFilePath, saveFilePath, opt=None):
+        self.imgFilePath = imgFilePath
+        self.saveFilePath = saveFilePath
+        self.img = cv.imread(imgFilePath, 0)
+        if opt is not None:
+            self.opt = opt
+
+    def _imgresize(self, size_num):
+        '''
+        图像大小调整
+        :param size_num: 缩放倍数
+        :return: cv对象
+        '''
+        H, W, C = self.img.shape
+        img = cv.resize(self.img, (int(H * size_num), int(W * size_num)))
+        return img
+
+    def _imgcanny(self, img):
+        '''
+        Canny边缘检测
+        :param img: cv对象
+        :return: cv对象
+        '''
+        blur = cv.GaussianBlur(img, (3, 3), 0)  # 高斯滤波降噪   参数  内核 偏差
+        edge = cv.Canny(blur, 30, 70)  # 30最小阈值 70最大阈值
+        return edge
+
+    def detection(self):
+        '''
+        批处理工具
+        :return: 图像字典 {"采样倍数":cv对象},Key列表
+        '''
+        imgL = []
+        for i in self.opt:
+            img = self._imgresize(i)  # 调整大小
+            img = self._imgcanny(img)
+            imgL.append((i, img))
+        imgL = dict(imgL)
+        return imgL,self.opt
