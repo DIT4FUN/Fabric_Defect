@@ -6,6 +6,7 @@ import os
 from PIL import Image
 import cv2 as cv
 import numpy
+import traceback
 
 
 def readIMGInDir(path, type=None, onle_name=False):
@@ -88,7 +89,7 @@ class imgdetection:
     近处理单个图片
     '''
     # 采样倍率
-    opt = [0.01,0.065,0.3,0.8, 1,1.4,2]
+    opt = [0.01, 0.065, 0.3, 0.8, 1, 1.4, 2]
 
     def __init__(self, imgFilePath, opt=None):
         self.imgFilePath = imgFilePath
@@ -102,8 +103,8 @@ class imgdetection:
         :param size_num: 缩放倍数
         :return: cv对象
         '''
-        W, H = self.img.shape
-        img = cv.resize(self.img, (int(H * size_num), int(W * size_num)))
+        H, W = self.img.shape
+        img = cv.resize(self.img, (int(W * size_num), int(H * size_num)))
         return img
 
     def _imgcanny(self, img):
@@ -112,7 +113,7 @@ class imgdetection:
         :param img: cv对象
         :return: cv对象
         '''
-        #blur = cv.GaussianBlur(img, (3, 3), 0)  # 高斯滤波降噪   参数  内核 偏差
+        # blur = cv.GaussianBlur(img, (3, 3), 0)  # 高斯滤波降噪   参数  内核 偏差
         edge = cv.Canny(img, 30, 65)  # 30最小阈值 70最大阈值
         return edge
 
@@ -130,15 +131,55 @@ class imgdetection:
         return imgL
 
 
-from train.osTools import mkdirL
-path="./trainData/ori4/img/"
-mkdirL("path", imgdetection.opt, de=True)
-img_Name=readIMGInDir("./trainData/ori4/img/")
-for i in img_Name:
-    a = imgdetection(i)
-    imgL = a.detection()
-    for ii in range(len(imgdetection.opt)):
-        cv.imwrite(path + str(imgdetection.opt[ii]) + "/" + str(i[i.rindex("/"):]) + '.jpg', imgL[imgdetection.opt[ii]])
-    print(i,"--OK!")
-print("Done")
+def debugIMG(path):
+    '''
+    Debug-目录下的图片提取为指定类型
+    :param path: 图片目录
+    :return: None
+    '''
+    from train.osTools import mkdirL
+    # path="./trainData/ori/img/"
+    mkdirL(path, imgdetection.opt, de=True)
+    img_Name = readIMGInDir(path)
+    for i in img_Name:
+        try:
+            a = imgdetection(i)
+            imgL = a.detection()
+            for ii in range(len(imgdetection.opt)):
+                p = path + str(imgdetection.opt[ii]) + "/" + str(i[i.rindex("/"):]) + '.jpg'
+                cv.imwrite(p, imgL[imgdetection.opt[ii]])
+            print(i, "--OK!")
+        except:
+            print(traceback.format_exc())
+    print("Done")
 
+
+def edgeFind(img_cv_obj):
+    '''
+
+    :param img_cv_obj: cv二值化对象
+    :return: [4339, 4483, 0, 2400] 起始W位置，结束W位置，起始H，结束H
+    '''
+    # im = cv.imread(img_cv_obj, 0)
+    H, W = img_cv_obj.shape
+    im = cv.resize(img_cv_obj, (1020, 500))
+    finalbox = []
+
+    sumA = 0  # 计数器 超过指定值即为轮廓
+    for i in range(1000):
+        s = 0
+        for ii in range(150, 300):
+            if im[ii, i] != 0 and s <= 10:
+                s += 1
+                for iii in range(350, 400):
+                    if im[iii, i] != 0 and sumA <= 50:
+                        sumA += 1
+                    if sumA == 50:
+                        finalbox = [i - 15, i + 15, 0, 500]
+                        break
+    finalbox = [int(i * (W / 1020)) for i in finalbox]
+    return finalbox
+
+
+im = cv.imread("./1.jpg", 0)
+print(edgeFind(im))

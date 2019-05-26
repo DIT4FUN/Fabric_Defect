@@ -2,7 +2,7 @@ import train.labelTool as labelTool
 import train.imgTool as imgTool
 import os
 
-'''
+
 labelL = labelTool.readLabel("F:/布匹数据集/R/label")
 imgname=imgTool.readIMGInDir("F:/布匹数据集/R/img",onle_name=True)
 imgL=imgTool.readIMGInDir("F:/布匹数据集/R/img")
@@ -15,6 +15,5 @@ for id,i in enumerate(imgname):
         os.remove(imgL[id])
         sum+=1
 print(sum,len(imgname))
-'''
-a="12345"
-print(a[:-1])
+
+
