@@ -16,13 +16,14 @@ place = fluid.CUDAPlace(0)
 IMG_H = 64  # 输入网络图像大小
 IMG_W = 64
 TRAINNUM = 20  # 训练次数
-READIMG=256 #每次读取图片数量
+READIMG = 256  # 每次读取图片数量
 
 # 指定路径
+# 路径除root外均不带"/"后缀
 path = './'
 modelPath = path + "model/defect.model"
-imgPath = path + "trainData/"
-labelPath = path + 'trainData/'
+imgPath = path + "trainData"
+labelPath = path + 'trainData'
 print("模型文件夹路径" + modelPath)
 print("原始图片文件夹路径" + imgPath)
 
@@ -30,14 +31,15 @@ print("原始图片文件夹路径" + imgPath)
 
 exe = fluid.Executor(place)
 
+
 # 加载数据
 
 def dataReader():
     def reader():
-
-            pass
+        pass
 
     return reader
+
 
 def convolutional_neural_network(img):
     # 第一个卷积-池化层
@@ -60,6 +62,7 @@ def convolutional_neural_network(img):
     pltdata = fluid.layers.fc(input=fc2, size=3, act=None)
     return fc2
 
+
 # 新建项目
 defectProgram = fluid.Program()
 startup = fluid.Program()  # 默认启动程序
@@ -68,12 +71,12 @@ startup = fluid.Program()  # 默认启动程序
 with fluid.program_guard(main_program=defectProgram, startup_program=startup):
     x_f = fluid.layers.data(name="x_f", shape=[1, IMG_H, IMG_W], dtype='float32')
     label_f = fluid.layers.data(name="label_f", shape=[1], dtype="int64")
-    #net_x = vgg_bn_drop(x_f)  # 获取网络
-    net_x =convolutional_neural_network(x_f)
+    # net_x = vgg_bn_drop(x_f)  # 获取网络
+    net_x = convolutional_neural_network(x_f)
     # 定义损失函数
     cost_Base_f = fluid.layers.cross_entropy(input=net_x, label=label_f)
     avg_cost_Base_f = fluid.layers.mean(fluid.layers.abs(cost_Base_f))
-    acc=fluid.layers.accuracy(input=net_x, label=label_f, k=1)
+    acc = fluid.layers.accuracy(input=net_x, label=label_f, k=1)
     # final_programT = final_program.clone(for_test=True)
     # 定义优化方法
     sgd_optimizer_f = fluid.optimizer.SGD(learning_rate=0.01)

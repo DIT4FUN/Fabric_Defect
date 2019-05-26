@@ -60,7 +60,7 @@ def imgCentreCut(filePath, savePath='./trainData/centre', block_size=256, detect
     fileName = fileName[:fileName.rindex(".jpg")] + ".png"
     try:
         img = cv.imread(filePath)
-        H, W, C = img.shape
+        W, H, C = img.shape
     except:
         return 0
     # img=cv.resize(img, (H*2, W * 2))
@@ -85,9 +85,10 @@ def imgCentreCut(filePath, savePath='./trainData/centre', block_size=256, detect
 class imgdetection:
     '''
     瑕疵检测预处理
+    近处理单个图片
     '''
-    # 原图，14倍下采样，10倍下采样，4.5倍下采样,2倍上采样
-    opt = [1, 0.07, 0.1, 0.2, 2]
+    # 采样倍率
+    opt = [0.01,0.065,0.3,0.8, 1,1.4,2]
 
     def __init__(self, imgFilePath, opt=None):
         self.imgFilePath = imgFilePath
@@ -101,7 +102,7 @@ class imgdetection:
         :param size_num: 缩放倍数
         :return: cv对象
         '''
-        H, W= self.img.shape
+        W, H = self.img.shape
         img = cv.resize(self.img, (int(H * size_num), int(W * size_num)))
         return img
 
@@ -111,14 +112,14 @@ class imgdetection:
         :param img: cv对象
         :return: cv对象
         '''
-        blur = cv.GaussianBlur(img, (3, 3), 0)  # 高斯滤波降噪   参数  内核 偏差
-        edge = cv.Canny(blur, 30, 70)  # 30最小阈值 70最大阈值
+        #blur = cv.GaussianBlur(img, (3, 3), 0)  # 高斯滤波降噪   参数  内核 偏差
+        edge = cv.Canny(img, 30, 65)  # 30最小阈值 70最大阈值
         return edge
 
     def detection(self):
         '''
         批处理工具
-        :return: 图像字典 {"采样倍数":cv对象},Key列表
+        :return: 图像字典 {"采样倍数":cv对象}
         '''
         imgL = []
         for i in self.opt:
@@ -126,8 +127,18 @@ class imgdetection:
             img = self._imgcanny(img)
             imgL.append((i, img))
         imgL = dict(imgL)
-        return imgL,self.opt
+        return imgL
 
-a=imgdetection("./trainData/ori2/1.jpg")
-imgL,_=a.detection()
-cv.imwrite('./trainData/ori2/3.jpg',imgL[1])
+
+from train.osTools import mkdirL
+path="./trainData/ori4/img/"
+mkdirL("path", imgdetection.opt, de=True)
+img_Name=readIMGInDir("./trainData/ori4/img/")
+for i in img_Name:
+    a = imgdetection(i)
+    imgL = a.detection()
+    for ii in range(len(imgdetection.opt)):
+        cv.imwrite(path + str(imgdetection.opt[ii]) + "/" + str(i[i.rindex("/"):]) + '.jpg', imgL[imgdetection.opt[ii]])
+    print(i,"--OK!")
+print("Done")
+

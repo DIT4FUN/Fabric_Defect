@@ -1,21 +1,20 @@
+import train.labelTool as labelTool
+import train.imgTool as imgTool
 import os
 
-def file_name(file_dir):
+'''
+labelL = labelTool.readLabel("F:/布匹数据集/R/label")
+imgname=imgTool.readIMGInDir("F:/布匹数据集/R/img",onle_name=True)
+imgL=imgTool.readIMGInDir("F:/布匹数据集/R/img")
 
-    for root, dirs, files in os.walk(file_dir):
-        print(root)  # 当前目录路径
-        print(dirs)  # 当前路径下所有子目录
-        print(files)  # 当前路径下所有非目录子文件
-
-
-
-
-
-def fileRead(path):
-    #a=os.listdir("./trainData")
-    filesL=[]
-    for root, dirs, files in os.walk(path):
-        filesL.append(files)
-    print("|找到",len(filesL)-1,"文件")
-    return filesL[1:]
-
+sum=0
+for id,i in enumerate(imgname):
+    try:
+        label=labelL[i[:6]]
+    except:
+        os.remove(imgL[id])
+        sum+=1
+print(sum,len(imgname))
+'''
+a="12345"
+print(a[:-1])

@@ -15,3 +15,17 @@ def mkdir(path, de=False):
         if de is True:
             shutil.rmtree(path)
             os.makedirs(path)
+
+
+def mkdirL(path, namelist, de=False):
+    '''
+    批量创建目录
+    :param path: 主目录
+    :param namelist: 子目录命名列表
+    :param de: 是否删除旧文件
+    :return: None
+    '''
+    for i in namelist:
+        mkdir(path + "/" + str(i), de=de)
+
+

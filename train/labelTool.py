@@ -1,4 +1,5 @@
 import os
+import traceback
 
 label1Key = {'N': '尼丝纺',
              'T': '塔丝隆',
@@ -16,6 +17,10 @@ label2Key = {'T': '平纹',
 
 
 def getDict():
+    '''
+    获取当前Key
+    :return:
+    '''
     return label1Key, label2Key
 
 
@@ -55,7 +60,6 @@ def readTXTInDir(path, type=None):
 def readLabel(labelPath, debug=False):
     '''
     一次性将所有图像标签加入内存
-    :param imgPath: 图片目录
     :param labelPath: Label路径
     :return:标签字典{ID:Label}
     '''
@@ -71,6 +75,7 @@ def readLabel(labelPath, debug=False):
             try:
                 labelL.append((id, int(key1[label[0]]) + int(key2[label[1]]) * 10))
             except:
+                #print(traceback.format_exc())
                 continue
     labelL = dict(labelL)
     if debug is True:
