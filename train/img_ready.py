@@ -35,6 +35,7 @@ def classifyIMG(imgpath, labelpath, savepath, IMG_H, IMG_W):
 
 def classifyIMG(imgpath, savepath, IMG_H, IMG_W):
 
+
 IMG_H = 323
 IMG_W = 180
 '''
