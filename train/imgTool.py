@@ -86,7 +86,7 @@ def imgCentreCut(filePath, savePath='./trainData/centre', block_size=256, detect
 class imgdetection:
     '''
     瑕疵检测预处理
-    近处理单个图片
+    仅处理单个图片
     '''
     # 采样倍率
     opt = [0.01, 0.065, 0.3, 0.8, 1, 1.4, 2]
@@ -119,8 +119,8 @@ class imgdetection:
 
     def detection(self):
         '''
-        批处理工具
-        :return: 图像字典 {"采样倍数":cv对象}
+        采样批处理工具
+        :return: 图像字典 {[int]采样倍数:cv对象}
         '''
         imgL = []
         for i in self.opt:
@@ -129,6 +129,61 @@ class imgdetection:
             imgL.append((i, img))
         imgL = dict(imgL)
         return imgL
+
+    def edgeFind(self):
+        '''
+        :return: [4339, 4483, 0, 2400] 起始W位置，结束W位置，起始H，结束H
+        '''
+
+        img_cv_obj = self.detection()[self.opt[-1]]
+        H, W = img_cv_obj.shape
+        im = cv.resize(img_cv_obj, (1020, 500))
+        finalbox = [0, 0, 0, 0]
+
+        sumA = 0  # 计数器 超过指定值即为轮廓
+        for i in range(1000):
+            s = 0
+            for ii in range(150, 300):
+                if im[ii, i] != 0 and s <= 10:
+                    s += 1
+                    for iii in range(350, 400):
+                        if im[iii, i] != 0 and sumA <= 50:
+                            sumA += 1
+                        if sumA == 50:
+                            finalbox = [i - 30, i + 30, 0, 500]
+                            break
+        finalbox = [int(i * (W / 1020)) for i in finalbox]
+        return finalbox
+
+    def roidel(self):
+        '''
+        去除布匹边缘
+        :return: 图像字典 {[int]采样倍数:cv对象}
+        '''
+        box = self.edgeFind()
+        imgL = []
+        for op in self.opt:
+            img_cv_obj = self.detection()[op]  # 取图片
+            # roi=[int(box[2]//2*op),int(box[3]//2*op), int(box[0]//2*op),int(box[1]//2*op)]
+            img_cv_obj[int(box[2] / 2 * op):int(box[3] / 2 * op), int(box[0] / 2 * op):int(box[1] / 2 * op)] = 0
+            imgL.append((op, img_cv_obj))
+        imgL = dict(imgL)
+        return imgL
+
+    def three2one(self):
+        '''
+        通道信息3合1
+        :return: cv对象
+        '''
+        img_1 = self.detection()[self.opt[1]]
+        img_2 = self.detection()[self.opt[2]]
+        img_3 = self.detection()[self.opt[3]]
+        H, W = img_3.shape
+        img_1 = cv.resize(img_1, (W, H))
+        img_2 = cv.resize(img_2, (W, H))
+        im = [img_1, img_2, img_3]
+        img = cv.merge(im)
+        return img
 
 
 def debugIMG(path):
@@ -142,6 +197,7 @@ def debugIMG(path):
     mkdirL(path, imgdetection.opt, de=True)
     img_Name = readIMGInDir(path)
     for i in img_Name:
+        '''
         try:
             a = imgdetection(i)
             imgL = a.detection()
@@ -151,35 +207,14 @@ def debugIMG(path):
             print(i, "--OK!")
         except:
             print(traceback.format_exc())
+        '''
+        try:
+            a = imgdetection(i)
+            im=a.three2one()
+            cv.imshow("1",im)
+            cv.waitKey()
+        except:
+            print(traceback.format_exc())
     print("Done")
 
-
-def edgeFind(img_cv_obj):
-    '''
-
-    :param img_cv_obj: cv二值化对象
-    :return: [4339, 4483, 0, 2400] 起始W位置，结束W位置，起始H，结束H
-    '''
-    # im = cv.imread(img_cv_obj, 0)
-    H, W = img_cv_obj.shape
-    im = cv.resize(img_cv_obj, (1020, 500))
-    finalbox = []
-
-    sumA = 0  # 计数器 超过指定值即为轮廓
-    for i in range(1000):
-        s = 0
-        for ii in range(150, 300):
-            if im[ii, i] != 0 and s <= 10:
-                s += 1
-                for iii in range(350, 400):
-                    if im[iii, i] != 0 and sumA <= 50:
-                        sumA += 1
-                    if sumA == 50:
-                        finalbox = [i - 15, i + 15, 0, 500]
-                        break
-    finalbox = [int(i * (W / 1020)) for i in finalbox]
-    return finalbox
-
-
-im = cv.imread("./1.jpg", 0)
-print(edgeFind(im))
+#debugIMG("./trainData/ori2/")

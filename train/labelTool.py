@@ -59,7 +59,7 @@ def readTXTInDir(path, type=None):
 
 def readLabel(labelPath, debug=False):
     '''
-    一次性将所有图像标签加入内存
+    一次性将所有布匹类型标签加入内存
     :param labelPath: Label路径
     :return:标签字典{ID:Label}
     '''
@@ -75,7 +75,7 @@ def readLabel(labelPath, debug=False):
             try:
                 labelL.append((id, int(key1[label[0]]) + int(key2[label[1]]) * 10))
             except:
-                #print(traceback.format_exc())
+                # print(traceback.format_exc())
                 continue
     labelL = dict(labelL)
     if debug is True:
@@ -84,6 +84,31 @@ def readLabel(labelPath, debug=False):
 
 
 # readLabel('./trainData/ori1/20181024_label',debug=True)
+
+def readclassify(labelPath, debug=False):
+    '''
+    一次性将所有图像分类标签加入内存
+    :param labelPath: Label路径
+    :return:标签字典{ID:Label}
+    '''
+    labelL = []
+    txtxfileL = readTXTInDir(labelPath)
+    for i in txtxfileL:
+        id = i[:6]
+        try:
+            with open(labelPath + "/" + i, "r") as f:
+                info = f.readlines()
+                label = int(info[0].replace("\n", "")[-1])
+                labelL.append((id,label))
+        except:
+                print(traceback.format_exc())
+                continue
+    labelL = dict(labelL)
+    if debug is True:
+        print(labelL)
+    return labelL
+
+#print(readclassify("F:/Fabric_Defect2/train/trainData/Classified2/label",debug=True))
 
 def translateLabel(label):
     '''

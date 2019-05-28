@@ -29,3 +29,12 @@ def mkdirL(path, namelist, de=False):
         mkdir(path + "/" + str(i), de=de)
 
 
+def readDirName(path):
+    '''
+    读取文件夹下一级目录名
+    :param path:
+    :return: 目录名列表
+    '''
+    for root, dirs, files in os.walk(path):
+        return dirs
+
