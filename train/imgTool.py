@@ -206,7 +206,7 @@ def debugIMG(path):
                 cv.imwrite(p, imgL[imgdetection.opt[ii]])
             print(i, "--OK!")
         except:
-            print(traceback.format_exc())
+            
         '''
         try:
             a = imgdetection(i)

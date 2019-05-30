@@ -73,7 +73,7 @@ def readLabel(labelPath, debug=False):
             info = f.readlines()
             label = info[1].replace("\n", "")[1:3]
             try:
-                labelL.append((id, int(key1[label[0]]) + int(key2[label[1]]) * 10))
+                labelL.append((id, int(key1[label[0]]) * len(label2Key) + int(key2[label[1]])))
             except:
                 # print(traceback.format_exc())
                 continue
@@ -83,7 +83,7 @@ def readLabel(labelPath, debug=False):
     return labelL
 
 
-# readLabel('./trainData/ori1/20181024_label',debug=True)
+#readLabel('./trainData/ori1/20181024_label',debug=True)
 
 def readclassify(labelPath, debug=False):
     '''
@@ -98,7 +98,7 @@ def readclassify(labelPath, debug=False):
         try:
             with open(labelPath + "/" + i, "r") as f:
                 info = f.readlines()
-                label = int(info[0].replace("\n", "")[-1])
+                label = int(info[0].split(" ")[1])
                 labelL.append((id,label))
         except:
                 print(traceback.format_exc())
@@ -113,8 +113,8 @@ def readclassify(labelPath, debug=False):
 def translateLabel(label):
     '''
 
-    :param label: int标签
-    :return: str标签
+    :param label: int标签 --4
+    :return: str标签 --锦涤纺平纹
     '''
     key1 = getLabelID(label1Key)
     key2 = getLabelID(label2Key)
@@ -122,4 +122,4 @@ def translateLabel(label):
 
     return strLabel
 
-# print(translateLabel(4))
+#print(translateLabel(4))

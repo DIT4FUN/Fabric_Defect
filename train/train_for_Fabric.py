@@ -2,12 +2,13 @@ import paddle.fluid as fluid
 import paddle
 import numpy as np
 from PIL import Image
-import train.imgTool as imgTool
-import train.labelTool as labelTool
+import imgTool as imgTool
+import labelTool as labelTool
 import matplotlib.pyplot as plt
 from pylab import mpl
+from net import net as netV2
 
-mpl.rcParams['font.sans-serif'] = ['SimHei']  # 用来显示中文，不然会乱码
+mpl.rcParams['font.sans-serif'] = ['SimHei']  # 用来显示中文
 
 # 参数表
 place = fluid.CUDAPlace(0)
@@ -15,8 +16,8 @@ place = fluid.CUDAPlace(0)
 IMG_CUT = False  # 图像是否预处理
 IMG_H = 32  # 输入网络图像大小
 IMG_W = 32
-TRAINNUM = 20  # 训练次数
-READIMG=256 #每次读取图片数量
+TRAINNUM = 5  # 训练次数
+READIMG=64 #每次读取图片数量
 # 指定路径
 path = './'
 modelPath = path + "model/fabric.model"
@@ -64,54 +65,6 @@ def dataReader():
     return reader
 
 
-# 定义神经网络模型
-def vgg_bn_drop(input):
-    def conv_block(ipt, num_filter, groups, dropouts):
-        return fluid.nets.img_conv_group(
-            input=ipt,
-            pool_size=2,
-            pool_stride=2,
-            conv_num_filter=[num_filter] * groups,
-            conv_filter_size=3,
-            conv_act='relu',
-            conv_with_batchnorm=True,
-            conv_batchnorm_drop_rate=dropouts,
-            pool_type='max')
-
-    conv1 = conv_block(input, 64, 2, [0.3, 0])
-    conv2 = conv_block(conv1, 128, 2, [0.4, 0])
-    conv3 = conv_block(conv2, 256, 3, [0.4, 0.4, 0])
-
-
-    drop = fluid.layers.dropout(x=conv3, dropout_prob=0.5)
-    fc1 = fluid.layers.fc(input=drop, size=512, act=None)
-    bn = fluid.layers.batch_norm(input=fc1, act='relu')
-    drop2 = fluid.layers.dropout(x=bn, dropout_prob=0.5)
-    fc2 = fluid.layers.fc(input=drop2, size=512, act=None)
-    predict = fluid.layers.fc(input=fc2, size=10, act='softmax')
-    return predict
-
-
-def convolutional_neural_network(img):
-    # 第一个卷积-池化层
-    # 使用20个5*5的滤波器，池化大小为2，池化步长为2，激活函数为Relu
-    conv1 = fluid.layers.conv2d(input=img,
-                                num_filters=32,
-                                filter_size=3,
-                                padding=1,
-                                stride=1,
-                                act='relu')
-
-    pool1 = fluid.layers.pool2d(input=conv1,
-                                pool_size=2,
-                                pool_stride=2,
-                                pool_type='max')
-
-    bn1 = fluid.layers.batch_norm(input=pool1)
-
-    fc2 = fluid.layers.fc(input=bn1, size=10, act='relu')
-    pltdata = fluid.layers.fc(input=fc2, size=3, act=None)
-    return fc2
 
 
 # 新建项目
@@ -123,7 +76,7 @@ with fluid.program_guard(main_program=fabricProgram, startup_program=startup):
     x_f = fluid.layers.data(name="x_f", shape=[1, IMG_H, IMG_W], dtype='float32')
     label_f = fluid.layers.data(name="label_f", shape=[1], dtype="int64")
     #net_x = vgg_bn_drop(x_f)  # 获取网络
-    net_x =convolutional_neural_network(x_f)
+    net_x =netV2(x_f,3)
     # 定义损失函数
     cost_Base_f = fluid.layers.cross_entropy(input=net_x, label=label_f)
     avg_cost_Base_f = fluid.layers.mean(fluid.layers.abs(cost_Base_f))
@@ -135,7 +88,7 @@ with fluid.program_guard(main_program=fabricProgram, startup_program=startup):
 # 数据传入设置
 
 prebatch_reader = paddle.batch(
-    reader=dataReader(),
+    reader=paddle.reader.shuffle(dataReader(),50),
     batch_size=READIMG)
 prefeeder = fluid.DataFeeder(place=place, feed_list=[x_f, label_f])
 

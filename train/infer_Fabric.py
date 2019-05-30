@@ -1,19 +1,13 @@
-#调整工作目录
-import os
-os.chdir('F:/Fabric_Defect2/train')
-
-
 try:
     import paddle.fluid as fluid
     import numpy as np
     from PIL import Image
     import cv2 as cv
     from imgTool import imgdetection as imgdetection
+    from labelTool import translateLabel as tlabel
     import traceback
 except:
-    print(traceback.format_exc())
     print("缺少模块，请检查Python包配置环境后重启该程序")
-    temp=input("按任意键退出")
     exit("发现异常，退出程序")
 
 print("程序载入ing... [当前预测环境--CPU预测模式]")
@@ -24,17 +18,10 @@ IMG_W = 180
 TRAINNUM = 50  # 训练次数
 READIMG = 155
 
-key = {0: '正常',
-       1: '油污',
-       2: '浆斑',
-       3: '糙纬',
-       4: '停车痕',
-       5: '横线的',
-       6: '竖线的'}
 # 指定路径
 # 路径除root外均不带"/"后缀
 path = './'
-testModelPath = path + "model/defectBase.model48INF0.86754966"
+testModelPath = path + "model/fabric.model"
 
 # 参数初始化
 exe = fluid.Executor(place)
@@ -43,9 +30,6 @@ exe = fluid.Executor(place)
 def readIMG(imgFilePath):
 
     img_obj = imgdetection(imgFilePath)
-    #imOri=Image.open(imgFilePath)
-    #imOri=imOri.resize((IMG_H, IMG_W), Image.ANTIALIAS)
-    #imOri.save("./temp1.jpg")
 
     im = img_obj.three2one()
     im0 = Image.fromarray(cv.cvtColor(im, cv.COLOR_BGR2RGB))
@@ -54,7 +38,7 @@ def readIMG(imgFilePath):
     # im.show()
     im = np.array(im0).reshape(1, 3, IMG_W, IMG_H).astype(np.float32)
     # im = im / 255.0 * 2.0 - 1.0
-    return im,im0
+    return im
 
 
 [inference_program, feed_target_names, fetch_targets] = fluid.io.load_inference_model(dirname=testModelPath,
@@ -62,11 +46,10 @@ def readIMG(imgFilePath):
 imgpath = input("模型准备完毕，请输入图片位置(请勿使用中文目录)__").replace("\\", "/")
 print("图片路径为：" + imgpath)
 try:
-    img,imF = readIMG(imgpath)
+    img = readIMG(imgpath)
 except:
     print(traceback.format_exc())
     print("请检查图片路径是否正确")
-    temp=input("按任意键退出")
     exit("发现异常，退出程序")
 
 print("图片读取成功，开始预测...")
@@ -80,10 +63,7 @@ try:
 
 except:
     print(traceback.format_exc())
-    temp=input("按任意键退出")
     exit("请检查配置环境，Fluid启动失败")
-print("渲染图片ing...")
 
-imF.show()
 
 input("运行结束")
