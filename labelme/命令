@@ -1,0 +1,1 @@
+labelme labelme --labels labels.txt --nodata
