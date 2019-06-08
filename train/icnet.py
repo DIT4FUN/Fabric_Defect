@@ -99,7 +99,6 @@ def bn(input, relu=False, name=None, is_test=False):
 
 
 def avg_pool(input, k_h, k_w, s_h, s_w, name=None, padding=0):
-    # 平均池化
     temp = fluid.layers.pool2d(
         input,
         pool_size=[k_h, k_w],
@@ -111,7 +110,6 @@ def avg_pool(input, k_h, k_w, s_h, s_w, name=None, padding=0):
 
 
 def max_pool(input, k_h, k_w, s_h, s_w, name=None, padding=0):
-    # 最大池化
     temp = fluid.layers.pool2d(
         input,
         pool_size=[k_h, k_w],
@@ -168,6 +166,7 @@ def pyramis_pooling(input, input_shape):
 
 
 def shared_convs(image):
+    print("shared_convs input", image.shape)
     tmp = conv(image, 3, 3, 32, 2, 2, padding='SAME', name="conv1_1_3_3_s2")
     tmp = bn(tmp, relu=True)
     tmp = conv(tmp, 3, 3, 32, 1, 1, padding='SAME', name="conv1_2_3_3")
@@ -180,6 +179,7 @@ def shared_convs(image):
     tmp = res_block(tmp, filter_num=128, padding=1, name="conv2_2")
     tmp = res_block(tmp, filter_num=128, padding=1, name="conv2_3")
     tmp = proj_block(tmp, filter_num=256, padding=1, stride=2, name="conv3_1")
+    print("shared_convs input", tmp.shape)
     return tmp
 
 
@@ -244,23 +244,30 @@ def proj_block(input, filter_num, padding=0, dilation=None, stride=1,
 
 
 def sub_net_4(input, input_shape):
-    #需要改为缩放0.065
+    print("sub_net_4 input", input.shape)
+    # !out_shape=(input_shape // 16)32更改为16
     tmp = interp(input, out_shape=(input_shape // 32))
     tmp = dilation_convs(tmp)
     tmp = pyramis_pooling(tmp, input_shape)
     tmp = conv(tmp, 1, 1, 256, 1, 1, name="conv5_4_k1")
     tmp = bn(tmp, relu=True)
     tmp = interp(tmp, out_shape=np.ceil(input_shape / 16))
+    print("sub_net_4 out", tmp.shape)
     return tmp
 
 
-def sub_net_2(input):
+def sub_net_2(input, input_shape):
+    print("sub_net_2 input", input.shape)
     tmp = conv(input, 1, 1, 128, 1, 1, name="conv3_1_sub2_proj")
     tmp = bn(tmp, relu=False)
+    tmp = interp(tmp, out_shape=np.ceil(input_shape / 16))
+    print("sub_net_2 out", tmp.shape)
+
     return tmp
 
 
 def sub_net_1(input):
+    print("sub_net_1 input", input.shape)
     tmp = conv(input, 3, 3, 32, 2, 2, padding='SAME', name="conv1_sub1")
     tmp = bn(tmp, relu=True)
     tmp = conv(tmp, 3, 3, 32, 2, 2, padding='SAME', name="conv2_sub1")
@@ -269,11 +276,13 @@ def sub_net_1(input):
     tmp = bn(tmp, relu=True)
     tmp = conv(tmp, 1, 1, 128, 1, 1, name="conv3_sub1_proj")
     tmp = bn(tmp, relu=False)
+    print("sub_net_1 out", tmp.shape)
     return tmp
 
 
 def CCF24(sub2_out, sub4_out, input_shape):
-    #需要改
+    print("CCF24 sub2_out", sub2_out.shape)
+    print("CCF24 sub4_out", sub4_out.shape)
     tmp = zero_padding(sub4_out, padding=2)
     tmp = atrous_conv(tmp, 3, 3, 128, 2, name="conv_sub4")
     tmp = bn(tmp, relu=False)
@@ -284,7 +293,8 @@ def CCF24(sub2_out, sub4_out, input_shape):
 
 
 def CCF124(sub1_out, sub24_out, input_shape):
-    # 需要改
+    print("CCF124 sub1_out", sub1_out.shape)
+    print("CCF124 sub24_out", sub24_out.shape)
     tmp = zero_padding(sub24_out, padding=2)
     tmp = atrous_conv(tmp, 3, 3, 128, 2, name="conv_sub2")
     tmp = bn(tmp, relu=False)
@@ -295,12 +305,21 @@ def CCF124(sub1_out, sub24_out, input_shape):
 
 
 def icnet(data, num_classes, input_shape):
-    image_sub1 = data
-    image_sub2 = interp(data, out_shape=input_shape * 0.5)
+    '''
 
-    s_convs = shared_convs(image_sub2)
+    :param data: 已经更改为0.8倍的图像数据
+    :param num_classes: 分类数量
+    :param input_shape: 输入图像数据的形状
+    :return:
+    '''
+    image_sub1 = data
+    image_sub2 = interp(data, out_shape=input_shape * 0.375)
+
+    s_convs = shared_convs(image_sub2)  # 参数共享
+    # s_convs=interp(s_convs,out_shape=s_convs.shape * 0.5)
     sub4_out = sub_net_4(s_convs, input_shape)
-    sub2_out = sub_net_2(s_convs)
+    sub2_out = sub_net_2(s_convs, input_shape)
+
     sub1_out = sub_net_1(image_sub1)
 
     sub24_out = CCF24(sub2_out, sub4_out, input_shape)

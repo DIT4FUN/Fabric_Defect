@@ -1,24 +1,23 @@
+"""Reader for Cityscape dataset.
+"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import os
 import cv2
 import numpy as np
 import paddle.dataset as dataset
 
-# 超参数设定
-# 路径设置
 DATA_PATH = "./data/cityscape"
 TRAIN_LIST = DATA_PATH + "/train.list"
 TEST_LIST = DATA_PATH + "/val.list"
+IGNORE_LABEL = 255
+NUM_CLASSES = 19
+TRAIN_DATA_SHAPE = (3, 720, 720)
+TEST_DATA_SHAPE = (3, 1024, 2048)
+IMG_MEAN = np.array((103.939, 116.779, 123.68), dtype=np.float32)
 
-IGNORE_LABEL = 255  # 需要被忽略的颜色
-NUM_CLASSES = 19  # 分类数量
-TRAIN_DATA_SHAPE = (3, 720, 720)  # 训练图片大小
-TEST_DATA_SHAPE = (3, 1024, 2048)  # 测试图片大小
-IMG_MEAN = np.array((103.939, 116.779, 123.68), dtype=np.float32)  # 图片颜色归一化参数
 
-
-# 共享必要超参数
 def train_data_shape():
     return TRAIN_DATA_SHAPE
 
@@ -31,9 +30,7 @@ def num_classes():
     return NUM_CLASSES
 
 
-# 数据读取类
 class DataGenerater:
-
     def __init__(self, data_list, flip=True, scaling=True):
         self.flip = flip
         self.scaling = scaling
@@ -49,18 +46,13 @@ class DataGenerater:
         """
 
         def reader():
-            # 打乱读取顺序
             np.random.shuffle(self.image_label)
-
             images = []
             labels_sub1 = []
             labels_sub2 = []
             labels_sub4 = []
             count = 0
-
-            # 加载主循环
             for image, label in self.image_label:
-                # 加载原图、[标签x倍数]
                 image, label_sub1, label_sub2, label_sub4 = self.process_train_data(
                     image, label)
                 count += 1
@@ -111,7 +103,7 @@ class DataGenerater:
             image, label = self.random_flip(image, label)
         if self.scaling:
             image, label = self.random_scaling(image, label)
-        # image, label = self.resize(image, label, out_size=TRAIN_DATA_SHAPE[1:])
+        image, label = self.resize(image, label, out_size=TRAIN_DATA_SHAPE[1:])
         label = label.astype("float32")
         label_sub1 = dataset.image.to_chw(self.scale_label(label, factor=4))
         label_sub2 = dataset.image.to_chw(self.scale_label(label, factor=8))
@@ -204,11 +196,11 @@ class DataGenerater:
         Get mask for valid pixels.
         """
         mask_sub1 = np.where(((label0 < (NUM_CLASSES + 1)) & (
-                label0 != IGNORE_LABEL)).flatten())[0].astype("int32")
+            label0 != IGNORE_LABEL)).flatten())[0].astype("int32")
         mask_sub2 = np.where(((label1 < (NUM_CLASSES + 1)) & (
-                label1 != IGNORE_LABEL)).flatten())[0].astype("int32")
+            label1 != IGNORE_LABEL)).flatten())[0].astype("int32")
         mask_sub4 = np.where(((label2 < (NUM_CLASSES + 1)) & (
-                label2 != IGNORE_LABEL)).flatten())[0].astype("int32")
+            label2 != IGNORE_LABEL)).flatten())[0].astype("int32")
         return image.astype(
             "float32"), label0, mask_sub1, label1, mask_sub2, label2, mask_sub4
 

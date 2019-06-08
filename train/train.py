@@ -26,7 +26,7 @@ add_arg = functools.partial(add_arguments, argparser=parser)
 add_arg('batch_size', int, 16, "Minibatch size.")
 add_arg('checkpoint_path', str, None, "Checkpoint svae path.")
 add_arg('init_model', str, None, "Pretrain model path.")
-add_arg('use_gpu', bool, True, "Whether use GPU to train.")
+add_arg('use_gpu', bool, False, "Whether use GPU to train.")
 add_arg('random_mirror', bool, True, "Whether prepare by random mirror.")
 add_arg('random_scaling', bool, True, "Whether prepare by random scaling.")
 # yapf: enable
@@ -119,6 +119,7 @@ def train(args):
     start_time = time.time()
     while True:
         # train a pass
+        print("OK")
         for data in train_reader():
             if iter_id > TOTAL_STEP:
                 end_time = time.time()
