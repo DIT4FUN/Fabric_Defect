@@ -12,9 +12,9 @@ DATA_PATH = "./data/cityscape"
 TRAIN_LIST = DATA_PATH + "/train.list"
 TEST_LIST = DATA_PATH + "/val.list"
 IGNORE_LABEL = 255
-NUM_CLASSES = 19
-TRAIN_DATA_SHAPE = (3, 720, 720)
-TEST_DATA_SHAPE = (3, 1024, 2048)
+NUM_CLASSES = 10
+TRAIN_DATA_SHAPE = (3, 1958, 960)
+TEST_DATA_SHAPE = (3, 2448, 1200)
 IMG_MEAN = np.array((103.939, 116.779, 123.68), dtype=np.float32)
 
 
@@ -31,7 +31,7 @@ def num_classes():
 
 
 class DataGenerater:
-    def __init__(self, data_list, flip=True, scaling=True):
+    def __init__(self, data_list, mode="train", flip=True, scaling=True):
         self.flip = flip
         self.scaling = scaling
         self.image_label = []

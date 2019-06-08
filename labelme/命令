@@ -1,1 +1,2 @@
 labelme labelme --labels labels.txt --nodata
+labelme_json_to_dataset apc2016_obj3.json -o apc2016_obj3_json

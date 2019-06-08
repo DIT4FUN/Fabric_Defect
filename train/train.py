@@ -15,33 +15,30 @@ from utils import add_arguments, print_arguments, get_feeder_data
 from paddle.fluid.layers.learning_rate_scheduler import _decay_step_counter
 from paddle.fluid.initializer import init_on_cpu
 
-# 随机项目种子
 if 'ce_mode' in os.environ:
     np.random.seed(10)
     fluid.default_startup_program().random_seed = 90
-# 运行命令集
+
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('batch_size', int, 16, "Minibatch size.")
-add_arg('checkpoint_path', str, None, "Checkpoint svae path.")
-add_arg('init_model', str, None, "Pretrain model path.")
-add_arg('use_gpu', bool, False, "Whether use GPU to train.")
-add_arg('random_mirror', bool, True, "Whether prepare by random mirror.")
-add_arg('random_scaling', bool, True, "Whether prepare by random scaling.")
+add_arg('batch_size',        int,   16,         "Minibatch size.")
+add_arg('checkpoint_path',   str,   "icnetMode/",       "Checkpoint svae path.")
+add_arg('init_model',        str,   None,       "Pretrain model path.")
+add_arg('use_gpu',           bool,  False,       "Whether use GPU to train.")
+add_arg('random_mirror',     bool,  True,       "Whether prepare by random mirror.")
+add_arg('random_scaling',    bool,  True,       "Whether prepare by random scaling.")
 # yapf: enable
 
-# 超参数表
-# 损失加权
 LAMBDA1 = 0.16
 LAMBDA2 = 0.4
 LAMBDA3 = 1.0
 
 LEARNING_RATE = 0.003  # 学习率
-POWER = 0.9
-LOG_PERIOD = 100
-CHECKPOINT_PERIOD = 100
-TOTAL_STEP = 100
+POWER = 0.9  # 学习率控制
+LOG_PERIOD = 1  # 输出间隔
+CHECKPOINT_PERIOD = 10  # 保存参数间隔轮数
+TOTAL_STEP = 10  # 训练轮数
 
 no_grad_set = []
 
@@ -67,7 +64,6 @@ def poly_decay():
 
 
 def train(args):
-    #获取参数
     data_shape = fabricReader.train_data_shape()
     num_classes = fabricReader.num_classes()
     # define network
@@ -79,7 +75,6 @@ def train(args):
     mask_sub2 = fluid.layers.data(name='mask_sub2', shape=[-1], dtype='int32')
     mask_sub4 = fluid.layers.data(name='mask_sub4', shape=[-1], dtype='int32')
 
-    #获取损失
     sub4_out, sub24_out, sub124_out = icnet(
         images, num_classes, np.array(data_shape[1:]).astype("float32"))
     loss_sub4 = create_loss(sub4_out, label_sub4, mask_sub4, num_classes)
@@ -87,8 +82,7 @@ def train(args):
     loss_sub124 = create_loss(sub124_out, label_sub1, mask_sub1, num_classes)
     reduced_loss = LAMBDA1 * loss_sub4 + LAMBDA2 * loss_sub24 + LAMBDA3 * loss_sub124
 
-    #定义优化器
-    regularizer = fluid.regularizer.L2Decay(0.0001)  # 权重衰减 防止过拟合
+    regularizer = fluid.regularizer.L2Decay(0.0001)
     optimizer = fluid.optimizer.Momentum(
         learning_rate=poly_decay(), momentum=0.9, regularization=regularizer)
     _, params_grads = optimizer.minimize(reduced_loss, no_grad_set=no_grad_set)
@@ -119,7 +113,6 @@ def train(args):
     start_time = time.time()
     while True:
         # train a pass
-        print("OK")
         for data in train_reader():
             if iter_id > TOTAL_STEP:
                 end_time = time.time()
@@ -157,6 +150,7 @@ def main():
     args = parser.parse_args()
     print_arguments(args)
     train(args)
+
 
 
 if __name__ == "__main__":

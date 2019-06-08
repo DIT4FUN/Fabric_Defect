@@ -19,51 +19,50 @@ IMG_MEAN = np.array((103.939, 116.779, 123.68), dtype=np.float32)
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 # yapf: disable
-add_arg('model_path',        str,   None,         "Model path.")
-add_arg('images_list',       str,   None,         "List file with images to be infered.")
-add_arg('images_path',       str,   None,         "The images path.")
-add_arg('out_path',          str,   "./output",         "Output path.")
-add_arg('use_gpu',           bool,  True,       "Whether use GPU to test.")
+add_arg('model_path', str, "icnetMode/10/", "Model path.")
+add_arg('images_list', str, "./data/cityscape/test.list", "List file with images to be infered.")
+add_arg('images_path', str, "./data/cityscape/", "The images path.")
+add_arg('out_path', str, "./output", "Output path.")
+add_arg('use_gpu', bool, False, "Whether use GPU to test.")
 # yapf: enable
 
-data_shape = [3, 1024, 2048]
-num_classes = 19
+data_shape = [3, 2448, 1200]
+num_classes = 10
 
 label_colours = [
+    [0, 0, 0],
+    # 背景色
+
     [128, 64, 128],
     [244, 35, 231],
     [69, 69, 69]
-    # 0 = road, 1 = sidewalk, 2 = building
+    # 0 = 布匹外部分, 1 = 正常部分, 2 = 油污
     ,
     [102, 102, 156],
     [190, 153, 153],
     [153, 153, 153]
-    # 3 = wall, 4 = fence, 5 = pole
+    # 3 = 浆斑, 4 = 停车痕, 5 = 糙纬
     ,
     [250, 170, 29],
     [219, 219, 0],
     [106, 142, 35]
-    # 6 = traffic light, 7 = traffic sign, 8 = vegetation
+    # 6 = 横向瑕疵, 7 = 纵向瑕疵, 8 = 笔迹
     ,
     [152, 250, 152],
     [69, 129, 180],
     [219, 19, 60]
-    # 9 = terrain, 10 = sky, 11 = person
+    # 9 = 其它瑕疵, 10 = None, 11 = None
     ,
     [255, 0, 0],
     [0, 0, 142],
     [0, 0, 69]
-    # 12 = rider, 13 = car, 14 = truck
+    # 12 = None, 13 = None, 14 = None
     ,
     [0, 60, 100],
     [0, 79, 100],
     [0, 0, 230]
-    # 15 = bus, 16 = train, 17 = motocycle
-    ,
-    [119, 10, 32]
+    # 15 = None, 16 = None, 17 = None
 ]
-
-# 18 = bicycle
 
 
 def color(input):
