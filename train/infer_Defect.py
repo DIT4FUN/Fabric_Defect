@@ -1,6 +1,6 @@
 #调整工作目录
 import os
-os.chdir('F:/Fabric_Defect2/train')
+#os.chdir('F:/Fabric_Defect2/train')
 
 
 try:
