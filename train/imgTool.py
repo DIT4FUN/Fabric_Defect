@@ -34,6 +34,34 @@ def readIMGInDir(path, type=None, onle_name=False):
 
 # print(readIMGInDir("./trainData/"))
 
+def saveIMGFilePathL(dirPath, savePath, oriIMGType="jpg", for_test=False):
+    '''
+    创建图像列表-需要为LabelME创建的文件夹格式
+    :param dirPath: LabelME生成文件夹格式
+    :param savePath:图像列表的不以/为结尾保存位置
+    :param for_test=False：是否用于测试 测试则不生成对应蒙版图片列表
+    :return:
+    '''
+    if for_test is not False:
+        with open(savePath + "/test.list", "w") as f:
+            pathL = readIMGInDir(dirPath + "/JPEGImages", onle_name=True)
+            for file in pathL:
+                f.writelines("JPEGImages/" + file + "\n")
+            print("写入量", len(pathL))
+    else:
+        # oriPathL = readIMGInDir(dirPath + "/JPEGImages", onle_name=True)
+        maskPathL = readIMGInDir(dirPath + "/SegmentationClassPNG", type="png", onle_name=True)
+        with open(savePath + "/train.list", "w") as f:
+            count = 0
+            for mask in maskPathL:
+                f.writelines("JPEGImages/" + mask[:-3] + oriIMGType + " " + "SegmentationClassPNG/" + mask + "\n")
+                count += 1
+            print("写入量", count)
+
+
+# saveIMGFilePathL("./trainData/20181024/out", "./trainData/20181024/out", for_test=True)
+
+
 def cannyPIL(img_cv_Obj):
     '''
 
@@ -210,11 +238,11 @@ def debugIMG(path):
         '''
         try:
             a = imgdetection(i)
-            im=a.three2one()
-            cv.imshow("1",im)
+            im = a.three2one()
+            cv.imshow("1", im)
             cv.waitKey()
         except:
             print(traceback.format_exc())
     print("Done")
 
-#debugIMG("./trainData/ori2/")
+# debugIMG("./trainData/ori2/")

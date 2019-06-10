@@ -8,17 +8,17 @@ from torNN import TorNN
 from imgTool import readIMGInDir as readIMGInDir
 from imgTool import imgdetection as imgdetection
 from osTools import mkdirL as mkdirL
-from net import net as netV2
 from osTools import readDirName as readDirName
 from pylab import mpl
+from fabricNet import FabricNet
 
 mpl.rcParams['font.sans-serif'] = ['SimHei']  # 解决PIL显示乱码问题
 
 # 参数表
 # place = fluid.CUDAPlace(0)
 place = fluid.CPUPlace()
-IMG_H = 323  # 输入网络图像大小1958 960
-IMG_W = 180
+TRAIN_DATA_SHAPE = (3, 1200, 2448)
+C, IMG_H, IMG_W = TRAIN_DATA_SHAPE  # 输入网络图像大小
 TRAINNUM = 100  # 训练次数
 READIMG = 50  # 每次读取图片数量
 
@@ -64,40 +64,16 @@ def dataReader():
     return reader
 
 
-def convolutional_neural_network(img):
-    # 第一个卷积-池化层
-    # 使用20个5*5的滤波器，池化大小为2，池化步长为2，激活函数为Relu
-    conv1 = fluid.layers.conv2d(input=img,
-                                num_filters=32,
-                                filter_size=3,
-                                padding=1,
-                                stride=1,
-                                act='relu')
-
-    pool1 = fluid.layers.pool2d(input=conv1,
-                                pool_size=2,
-                                pool_stride=2,
-                                pool_type='max')
-
-    bn1 = fluid.layers.batch_norm(input=pool1)
-    fc1 = fluid.layers.fc(input=bn1, size=1024, act="relu")
-    fc2 = fluid.layers.fc(input=fc1, size=512, act="relu")
-    fc3 = fluid.layers.fc(input=fc2, size=256, act="relu")
-    fc4 = fluid.layers.fc(input=fc3, size=128, act="relu")
-    fc5 = fluid.layers.fc(input=fc4, size=7, act='softmax')
-    return fc5
-
-
 # 新建项目
 defectProgram = fluid.Program()
 startup = fluid.Program()  # 默认启动程序
 
 # 编辑项目
 with fluid.program_guard(main_program=defectProgram, startup_program=startup):
-    x_f = fluid.layers.data(name="x_f", shape=[3, IMG_H, IMG_W], dtype='float32')
+    x_f = fluid.layers.data(name="x_f", shape=[C, IMG_H, IMG_W], dtype='float32')
     label_f = fluid.layers.data(name="label_f", shape=[1], dtype="int64")
-    # net_x = convolutional_neural_network(x_f)
-    net_x = netV2(x_f, class_dim=7)
+    net = FabricNet(class_dim=10)
+    net_x = net.net(x_f)
     # 定义损失函数
     cost_Base_f = fluid.layers.cross_entropy(input=net_x, label=label_f)
     avg_cost_Base_f = fluid.layers.mean(fluid.layers.abs(cost_Base_f))
@@ -119,9 +95,9 @@ exe.run(startup)
 # 开始训练
 for train_num, i in enumerate(range(TRAINNUM)):
     accsum = []
-    losssum=[]
-    accMean=0
-    lossMean=0
+    losssum = []
+    accMean = 0
+    lossMean = 0
     for batch_id, data in enumerate(prebatch_reader()):
         # print("Data Ready!")
         # 获取训练数据
@@ -137,8 +113,8 @@ for train_num, i in enumerate(range(TRAINNUM)):
         with open("./log.txt", "w") as f:
             f.writelines(str(train_num) + str(outs[1]) + "\n")
         accMean = sum(accsum) / len(accsum)
-        lossMean=sum(losssum)/len(losssum)
-        if accMean >= 0.7 and len(accsum) >= 6 or train_num==20:
+        lossMean = sum(losssum) / len(losssum)
+        if accMean >= 0.7 and len(accsum) >= 6 or train_num == 20:
             fluid.io.save_inference_model(baseModelPath + str(batch_id) + str(accMean), ['x_f'], [net_x], exe,
                                           main_program=defectProgram)
 
