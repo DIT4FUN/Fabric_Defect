@@ -18,8 +18,8 @@ place = fluid.CPUPlace()
 TRAIN_DATA_SHAPE = (3, 1200, 2448)
 C, IMG_H, IMG_W = TRAIN_DATA_SHAPE  # 输入网络图像大小
 TRAINNUM = 100  # 训练次数
-READIMG = 5  # 每次读取图片数量
-class_dim=10
+READIMG = 3  # 每次读取图片数量
+class_dim = 10
 LEARNING_RATE = 0.003  # 学习率
 POWER = 0.9  # 学习率控制
 TOTAL_STEP = 10  # 训练轮数
@@ -41,6 +41,8 @@ def poly_decay():
         decayed_lr = LEARNING_RATE * (fluid.layers.pow(
             (1 - global_step / TOTAL_STEP), POWER))
     return decayed_lr
+
+
 # 参数初始化
 exe = fluid.Executor(place)
 
@@ -53,26 +55,30 @@ startup = fluid.Program()  # 默认启动程序
 # 编辑项目
 with fluid.program_guard(main_program=defectProgram, startup_program=startup):
     no_grad_set = []
-    def create_loss(predict, label, mask, num_classes):
+
+
+    def create_loss(predict, label ,mask):
+        print(predict.shape, label.shape)
         predict = fluid.layers.transpose(predict, perm=[0, 2, 3, 1])
-        predict = fluid.layers.reshape(predict, shape=[-1, num_classes])
+        predict = fluid.layers.reshape(predict, shape=[-1, class_dim])
         label = fluid.layers.reshape(label, shape=[-1, 1])
         predict = fluid.layers.gather(predict, mask)
         label = fluid.layers.gather(label, mask)
         label = fluid.layers.cast(label, dtype="int64")
+
+        print(predict.shape, label.shape)
         loss = fluid.layers.softmax_with_cross_entropy(predict, label)
         no_grad_set.append(label.name)
         return fluid.layers.reduce_mean(loss)
 
 
     image = fluid.layers.data(name="x_f", shape=[C, IMG_H, IMG_W], dtype='float32')
-    mask_sub = fluid.layers.data(name='mask_sub1', shape=[-1], dtype='int32')
     label_sub = fluid.layers.data(name='label_sub1', shape=[1], dtype='int32')
-
+    mask_sub1 = fluid.layers.data(name='mask_sub1', shape=[-1], dtype='int32')
     net = FabricNet(class_dim=class_dim)
-    net_x = net.net(image)
+    net_x = net.net(image)  # out_F (-1, 10, 300, 612)
     # 定义损失函数
-    cost_Base_f = create_loss(net_x, label_sub, mask_sub, class_dim)
+    cost_Base_f = create_loss(net_x, label_sub,mask_sub1)
 
     # final_programT = final_program.clone(for_test=True)
     # 定义优化方法
@@ -84,9 +90,9 @@ with fluid.program_guard(main_program=defectProgram, startup_program=startup):
 # 数据传入设置
 
 prebatch_reader = paddle.batch(
-    reader=paddle.reader.shuffle(dataReader(), 100),
+    reader=paddle.reader.shuffle(dataReader(), 50),
     batch_size=READIMG)
-prefeeder = fluid.DataFeeder(place=place, feed_list=[image, label_sub,mask_sub])
+prefeeder = fluid.DataFeeder(place=place, feed_list=[image, label_sub,mask_sub1])
 
 # 准备训练
 exe.run(startup)
@@ -103,4 +109,3 @@ for train_num, i in enumerate(range(TRAINNUM)):
                        feed=prefeeder.feed(data),
                        fetch_list=[cost_Base_f])
         print(train_num, outs[0])
-

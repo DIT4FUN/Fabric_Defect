@@ -34,7 +34,7 @@ class FabricNet:
         '''
         cp_1 = fluid.layers.conv2d(
             input=input,
-            num_filters=256,
+            num_filters=32,
             filter_size=3,
             act="relu",
             padding=1
@@ -71,7 +71,7 @@ class FabricNet:
         p2_cp_4 = fluid.nets.simple_img_conv_pool(
             input=path2_conv,
             filter_size=3,  # 3x3滤波器
-            num_filters=1024,  # 卷积核数量
+            num_filters=64,  # 卷积核数量
             pool_size=2,  # 池化x2
             pool_stride=2,  # 池化步长2
             conv_padding=1,  # 填充
@@ -83,7 +83,7 @@ class FabricNet:
         p3_cp_4 = fluid.nets.simple_img_conv_pool(
             input=path3_conv,
             filter_size=3,  # 3x3滤波器
-            num_filters=512,  # 卷积核数量
+            num_filters=64,  # 卷积核数量
             pool_size=2,  # 池化x2
             pool_stride=2,  # 池化步长2
             conv_padding=1,  # 填充
@@ -92,7 +92,7 @@ class FabricNet:
         p3_cp_5 = fluid.nets.simple_img_conv_pool(
             input=p3_bn_4,
             filter_size=3,  # 3x3滤波器
-            num_filters=512,  # 卷积核数量
+            num_filters=64,  # 卷积核数量
             pool_size=2,  # 池化x2
             pool_stride=2,  # 池化步长2
             conv_padding=1,
@@ -108,10 +108,12 @@ class FabricNet:
         print("path3", p3_final.shape)
 
         # 需要改
-        out = fluid.layers.concat(
+        out0 = fluid.layers.concat(
             [p1_final, p2_final, p3_final], axis=1)
-        out = fluid.layers.conv2d(out, 10, 1, 1)
+        out = fluid.layers.conv2d(out0, 128, 1, 1)
+        out = fluid.layers.conv2d(out, 64, 1, 1)
+        out = fluid.layers.conv2d(out, self.class_dim, 1, 1)
         out_final = fluid.layers.resize_bilinear(out, out_shape=[i//4 for i in input.shape[-2:]])
-        print("out", out.shape)
+        print("out0", out0.shape)
         print("out_F", out_final.shape)
-        return out
+        return out_final

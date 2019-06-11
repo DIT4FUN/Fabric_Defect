@@ -41,13 +41,13 @@ class DataGenerater:
         """
 
         def reader():
-
             for image, label in self.image_label:
                 image, label_sub1 = self.process_train_data(
                     image, label)
                 yield self.mask(
                     np.array(image),
                     np.array(label_sub1))
+
         return reader
 
     def process_train_data(self, image, label):
@@ -151,9 +151,16 @@ class DataGenerater:
         """
         mask_sub1 = np.where(((label0 < (NUM_CLASSES + 1)) & (
                 label0 != IGNORE_LABEL)).flatten())[0].astype("int32")
-
-        return image.astype(
-            "float32"), label0, mask_sub1
+        shape1 = [1]
+        for i in image.shape:
+            shape1.append(i)
+        shape3 = [1]
+        for i in label0.shape:
+            shape3.append(i)
+        image = image.astype("float32").reshape(shape1)
+        label0 = label0.reshape(shape3)
+        mask_sub1=mask_sub1.reshape(1,-1)
+        return image, label0,mask_sub1
 
 
 def train(flip=True, scaling=True):
