@@ -1,4 +1,4 @@
 labelme labelme --labels labels.txt --nodata
 labelme_json_to_dataset apc2016_obj3.json
-labelvoc.py 20181024 20181024out --labels labels.txt
+labelVOC.py 20181024 20181024out --labels labels.txt
 
