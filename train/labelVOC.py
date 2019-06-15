@@ -13,8 +13,8 @@ import numpy as np
 import PIL.Image
 import labelme
 
-path = "./trainData/color"
-outPath = "./trainData/color/out1"
+path = "./trainData/20181024"
+outPath = "./trainData/20181024/out"
 labels="./trainData/labels.txt"
 
 def main():

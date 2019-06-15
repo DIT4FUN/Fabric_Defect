@@ -2,5 +2,6 @@
 <project version="4">
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/labelme/1/003932_2_1Y.json" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/train/log.txt" charset="GBK" />
   </component>
 </project>
