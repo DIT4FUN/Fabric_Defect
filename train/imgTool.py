@@ -3,10 +3,12 @@ ImgTool
 处理图片工具集合
 '''
 import os
-from PIL import Image
+from PIL import Image, ImageFont, ImageDraw
 import cv2 as cv
 import numpy
 import traceback
+
+fontP = "./font/1.ttf"
 
 
 def readIMGInDir(path, type=None, onle_name=False):
@@ -245,4 +247,89 @@ def debugIMG(path):
             print(traceback.format_exc())
     print("Done")
 
+
 # debugIMG("./trainData/ori2/")
+
+def cut_box_for_infer(img, quick=False):
+    '''
+    GT-CutR模型 预测图片预处理工具
+    :param img: PIL_Obj
+    :param quick = False:极速模式 关闭
+    :return: imgL 剪裁后图片列表
+    '''
+    # 参数表
+    boxsixe = [240, 240]  # 2倍的测试框
+    input_img = (1200, 2448)  # 输入图片
+    check_input = (2448, 1200)
+    assert (check_input == img.size), "输入图片不符合(1200, 2448)尺寸！"
+    vbox_input_img = [960, 2160]  # 虚拟图片大小
+    ext = 0.  # ext: 扩充偏移量[0-0.5]
+    extup = 0.  # extup:上下偏移量[0.3-1]
+
+    extupL = 144 * (1 - extup)
+    img = img.crop((extupL, 120, vbox_input_img[1] + extupL, vbox_input_img[0] + 120))  # W H
+    p = 1
+    input_img = img
+    # 步长
+    long = boxsixe[0] // 2
+    if quick is True:
+        p = 2
+        ext *= 0.5
+
+    '''
+    选择框处理工具
+    :param input_img: PIL对象
+    :return: 小块图像列表
+    '''
+    mini_imgL = []
+    box_W = (2 * vbox_input_img[1]) // boxsixe[0]
+    box_H = (2 * vbox_input_img[0]) // boxsixe[0]
+    # print(box_W, box_H) 18 8
+    for list_W in range(box_W):
+        for list_H in range(0, box_H, p):
+            if list_W % 2 == 1:
+                if list_W == box_W - 1:
+                    continue
+                box = (list_W * long + ext * boxsixe[0], list_H * long, (list_W + 1) * long + ext * boxsixe[0],
+                       (list_H + 1) * long)
+
+            else:
+                box = (list_W * long, list_H * long, (list_W + 1) * long, (list_H + 1) * long)
+            mini_img = input_img.crop(box)
+            mini_imgL.append(mini_img)
+    return mini_imgL
+
+
+'''
+imgF="./testData/075353_1_0.jpg"
+img=Image.open(imgF)
+cut_box_for_infer(img)
+'''
+
+
+def drawIMG(dirP, imgname):
+    '''
+
+    :param imgP:  图片文件路径
+    :return: PIL对象
+    '''
+    imgP = dirP + "/" + imgname
+    labelP = dirP + "/info/" + imgname + ".txt"
+    imgP = Image.open(imgP)
+    vbox_input_img = [960, 2160]  # 虚拟图片大小
+    imgP = imgP.crop((0, 120, vbox_input_img[1], vbox_input_img[0] + 120))
+    draw = ImageDraw.Draw(imgP)
+    with open(labelP, "r") as f:
+        info = f.read().split("\n")[:-1]
+        for i in info:
+            L = i.split("-")
+            W = int(L[0]) - 1
+            H = int(L[1]) - 1
+            strL = L[2] + "/" + L[3]
+            font = ImageFont.truetype(fontP, 15, encoding="utf-8")
+            draw.text((60 + 120 * W, 120 + 240 * H), strL, fill=200, font=font)
+    return imgP
+
+
+a = drawIMG("./testData", "222443_1_5Y.jpg")
+a.show()

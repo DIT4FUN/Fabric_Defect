@@ -26,7 +26,7 @@ LEARNING_RATE = 0.0005  # 学习率
 # 路径除root外均不带"/"后缀
 path = './'
 baseModelPath = path + "model/defectBase"
-data_path = path + "data1"
+data_path = path + "data"
 train_imgPath = data_path + "/train"
 test_imgPath = data_path + "/test"
 
@@ -114,23 +114,32 @@ for train_num, i in enumerate(range(TRAINNUM)):
             t_sumcost.append(sum(t_outs[2]) / len(t_outs[2]))
         except:
             pass
+    if len(sumacc1) == 0 or len(t_sumacc1) == 0 or len(sumacc5) == 0 or len(t_sumacc5) == 0 or len(
+            t_sumcost) == 0 or len(sumcost) == 0:
+        continue
     avgacc = sum(sumacc1) / len(sumacc1)
-    t_avgacc = sum(t_sumacc1) / len(t_sumacc1)
+    avgacc5 = sum(sumacc5) / len(sumacc5)
     accL1.append(avgacc)
-    accL5.append(sum(sumacc5) / len(sumacc5))
+    accL5.append(avgacc5)
+
+    t_avgacc = sum(t_sumacc1) / len(t_sumacc1)
+    t_avgacc5 = sum(t_sumacc5) / len(t_sumacc5)
     t_accL1.append(t_avgacc)
-    t_accL5.append(sum(t_sumacc5) / len(t_sumacc5))
-    costL.append(sum(sumcost) / len(sumcost))
+    t_accL5.append(t_avgacc5)
+
+    tcost = sum(sumcost) / len(sumcost)
+    costL.append(tcost)
     t_costL.append(sum(t_sumcost) / len(t_sumcost))
+    print(train_num, "Acc", avgacc, avgacc5, "TAcc", t_avgacc, t_avgacc5, tcost)
 
     if avgacc > maxAcc:
         maxAcc = avgacc
-        fluid.io.save_inference_model(dirname=baseModelPath + str(train_num) + "Train" + str(int(maxAcc)),
+        fluid.io.save_inference_model(dirname=baseModelPath + str(train_num) + "Train" + str(int(maxAcc * 100)),
                                       feeded_var_names=["image"], target_vars=[net_x], main_program=defectProgram,
                                       executor=exe)
     if t_avgacc > t_maxAcc:
-        maxAcc = avgacc
-        fluid.io.save_inference_model(dirname=baseModelPath + str(train_num) + "Test" + str(int(maxAcc)),
+        t_maxAcc = t_avgacc
+        fluid.io.save_inference_model(dirname=baseModelPath + str(train_num) + "Test" + str(int(t_maxAcc * 100)),
                                       feeded_var_names=["image"], target_vars=[net_x], main_program=defectProgram,
                                       executor=exe)
     if train_num % 100 == 99:
