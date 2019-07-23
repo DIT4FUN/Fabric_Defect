@@ -1,6 +1,5 @@
 # 加载库
 import paddle.fluid as fluid
-import paddle
 import numpy as np
 from PIL import Image
 import numpy
@@ -17,22 +16,23 @@ L2text = {0: "无", 1: "布匹外", 2: "正常", 3: "油污", 4: "浆斑", 5: "�
 # 指定路径
 path = "./"
 params_dirname = path + "model/defectBase49Test80"
-print("训练后文件夹路径" + params_dirname)
+print("Model文件夹路径" + params_dirname)
 
 # 需要传入的参数
 gpu_infer = False  # 是否使用GPU预测
-quick_mode = True  # 是否使用快速模式
-imgs_path = "./testData"  # 图片路径
+quick_mode = False  # 是否使用快速模式
+
+imgs_path = "./test"  # 图片路径
 save_path = imgs_path + "/info"  # 位置信息保存路径
-mkdir(save_path,de=True)
+mkdir(save_path, de=True)
 
 
 def dataLReader(img_filePath):
-    '''
+    """
     批量图片预处理工具
     :param img_filePathL: 图片所在目录
     :return: imgFinalL [(文件名:PIL对象列表),(文件名:PIL对象列表)...]
-    '''
+    """
     imgFinalL = []
     img_filePathL = readIMGInDir(img_filePath)
     img_fileNameL = readIMGInDir(img_filePath, onle_name=True)
@@ -58,18 +58,30 @@ imgFinalL = dataLReader(imgs_path)
 
 for img_name, img_PIL in imgFinalL:
     # 读取序列
-    infoL=[]
+    infoL = []
+    start_time = time.time()
     for id, data in enumerate(img_PIL):
-        #start_time = time.time()
+
         im = numpy.array(data).reshape(1, 1, box_size[0], box_size[1]).astype(numpy.float32)
         results = exe.run(inference_program,
                           feed={feed_target_names[0]: im},
                           fetch_list=fetch_targets)
-        end_time = time.time()
-        #print("Time:", end_time - start_time)
-        lab = np.argsort(results)[0][0][-1]
-        lab2=np.argsort(results)[0][0][-2]
 
+        labL = sorted(results[0][0])
+        lab1 = str(int(labL[-1] * 100)) + "%"
+        lab2 = str(int(labL[-2] * 100)) + "%"
+
+        tage1 = np.argsort(results)[0][0][-1]
+        tage2 = np.argsort(results)[0][0][-2]
+
+        info1 = str(L2text[tage1]) + lab1
+        info2 = str(L2text[tage2]) + lab2
+        if int(lab2[:-1]) < 10:
+            info2 = "Other"
+        passTage = [1, 2]
+        if int(lab1[:-1]) >= 98 and tage1 in passTage:
+            info1 = " "
+            info2 = " "
         # 序列 18 8
         if quick_mode is False:
             H = id % 8 + 1
@@ -77,11 +89,11 @@ for img_name, img_PIL in imgFinalL:
         else:
             H = id % 4 + 1
             W = id // 4 + 1
-        info=str(W)+"-"+str(H)+"-"+str(L2text[lab])+"-"+str(L2text[lab2])
+        info = str(W) + "-" + str(H) + "-" + info1 + "-" + info2
         infoL.append(info)
-    with open(save_path+"/"+str(img_name)+".txt","w") as f:
+    with open(save_path + "/" + str(img_name) + ".txt", "w") as f:
         for i in infoL:
-            f.writelines(i+"\n")
-        # data.save("./output/"+str(img_name)+"-"+str(id)+"L"+str(L2text[lab])+"W-H"+str(W)+str(H)+".jpg")
-
-        # print(img_name, lab+1, "W-H", W, H)
+            f.writelines(i + "\n")
+    end_time = time.time()
+    print("Time:", end_time - start_time)
+input("按任意键结束")

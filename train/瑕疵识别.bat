@@ -1,1 +1,1 @@
-python infer_Defect.py
+python infer.py

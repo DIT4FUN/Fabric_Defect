@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="/static/webapp/css/layui.css"/>
+    <title>布匹瑕疵后台管理系统</title>
+    <style>
+        .q1 {
+            margin-top: 30px;
+            margin-left: 20px;
+        }
+
+    </style>
+</head>
+
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header">
+        <div class="layui-logo">布匹瑕疵后台管理系统</div>
+
+    </div>
+    <div class="q1">
+        <ul class="layui-timeline">
+            <li class="layui-timeline-item">
+                <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+                <div class="layui-timeline-content layui-text">
+                    <h3 class="layui-timeline-title">设备统计</h3>
+
+                </div>
+            </li>
+        </ul>
+        <table class="layui-table">
+
+            <thead>
+            <tr>
+                <th>设备 ID</th>
+                <th>检测数量</th>
+                <th>总瑕疵块数量</th>
+                <th>瑕疵块占比</th>
+                <th>油污</th>
+                <th>浆斑</th>
+                <th>停车痕</th>
+                <th>糙纬</th>
+                <th>横向</th>
+                <th>纵向</th>
+            </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    {% for i in equ %}
+                        <td>{{ i }}</td>
+                    {% endfor %}
+                </tr>
+
+            </tbody>
+        </table>
+        <ul class="layui-timeline">
+            <li class="layui-timeline-item">
+                <i class="layui-icon layui-timeline-axis">&#xe63f;</i>
+                <div class="layui-timeline-content layui-text">
+                    <h3 class="layui-timeline-title">布匹瑕疵统计页面</h3>
+                    <p>
+                        瑕疵检测API:http://127.0.0.1:8000/api/ 传入data={'image': 瑕疵图像Base64字符串, 'time': 当前时间}即可
+                    </p>
+                </div>
+            </li>
+        </ul>
+
+        <table class="layui-table">
+            <colgroup>
+                <col width="150">
+                <col width="200">
+                <col width="100">
+                <col width="120">
+                <col width="120">
+                <col>
+            </colgroup>
+            <thead>
+            <tr>
+                <th>布匹 ID</th>
+                <th>时间信息</th>
+                <th>设备信息</th>
+                <th>总瑕疵块数量</th>
+                <th>瑕疵块占比</th>
+                <th>油污</th>
+                <th>浆斑</th>
+                <th>停车痕</th>
+                <th>糙纬</th>
+                <th>横向</th>
+                <th>纵向</th>
+                <th>瑕疵图像</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for info in infos %}
+                <tr>
+                    {% for i in info|slice:":-1" %}
+                        <td>{{ i }}</td>
+
+                    {% endfor %}
+                    <td>
+                        <a href="/static/webapp/imgInfo/{{ info|last }}">查看图像</a>
+                    </td>
+                </tr>
+            {% endfor %}
+
+            </tbody>
+        </table>
+
+    </div>
+</div>
+<div class="layui-footer q1">
+    <!-- 底部固定区域 -->
+    <p>当前状态：检测完毕</p>
+    © 版权所有 gtzhang - 2019
+</div>
+<script>
+    function abc() {
+        layui.use('layer', function () {
+            var layer = layui.layer;
+
+            layer.msg('暂时没有开放哦~');
+        });
+    }
+
+</script>
+<script src="/static/webapp/layui.js"></script>
+<script>
+    //JavaScript代码区域
+    layui.use('element', function () {
+        var element = layui.element;
+
+    });
+</script>
+</body>
+</html>

@@ -4,20 +4,19 @@ ImgTool
 '''
 import os
 from PIL import Image, ImageFont, ImageDraw
-import cv2 as cv
-import numpy
+import numpy as np
 import traceback
 
 fontP = "./font/1.ttf"
 
 
 def readIMGInDir(path, type=None, onle_name=False):
-    '''
+    """
     读取文件夹下所有文件的文件名和路径
     :param path: 路径
     type:指定文件类型，如果没有指定则视为jpg类型
     :return: nameL:文件夹内所有路径+文件名 './trainData/ori1/20181024/000030_1_0.jpg' or '000030_1_0.jpg'
-    '''
+    """
     if type is None:
         type = '.jpg'
     else:
@@ -37,13 +36,13 @@ def readIMGInDir(path, type=None, onle_name=False):
 # print(readIMGInDir("./trainData/"))
 
 def saveIMGFilePathL(dirPath, savePath, oriIMGType="jpg", for_test=False):
-    '''
+    """
     创建图像列表-需要为LabelME创建的文件夹格式
     :param dirPath: LabelME生成文件夹格式
     :param savePath:图像列表的不以/为结尾保存位置
     :param for_test=False：是否用于测试 测试则不生成对应蒙版图片列表
     :return:
-    '''
+    """
     if for_test is not False:
         with open(savePath + "/test.list", "w") as f:
             pathL = readIMGInDir(dirPath + "/JPEGImages", onle_name=True)
@@ -63,205 +62,161 @@ def saveIMGFilePathL(dirPath, savePath, oriIMGType="jpg", for_test=False):
 
 # saveIMGFilePathL("./trainData/20181024/out", "./trainData/20181024/out", for_test=True)
 
+class ImgPretreatment:
+    """
 
-def cannyPIL(img_cv_Obj):
-    '''
+    图像预处理类
+    传入图片文件夹路径后，对index下的图片进行预处理
+    批量处理代码：
+        # 创建工具对象并传入相关参数
+        tool_img_pretreatment=ImgPretreatment(...)
+        # 处理所有图像
+        for index in range(tool_img_pretreatment.__len__())
+            # 初始化当前index图像
+            tool_img_pretreatment.img_init(index)
+            # 对图像进行操作
+            tool_img_pretreatment.img_cut_color()
+            tool_img_pretreatment.img_xxx()
+            tool_img_pretreatment.img_xxx()
+            ...
+            # 获取最终处理好的图像(Pillow对象)
+            final_img_pil_obj = tool_img_pretreatment.req_final_img()
 
-    :param img_PIL_Obj: pillow对象的图片
-    :return: 直接返回PIL对象数据
-    '''
-    a = numpy.array(img_cv_Obj)
-    img = cv.cvtColor(a, cv.COLOR_BGR2GRAY)
-    cannyimg = cv.Canny(img, 0, 255)
-    image = Image.fromarray(cv.cvtColor(cannyimg, cv.COLOR_BGR2RGB))
-    return image
+    Tips:
+    1、第一次进行图像减颜色均值操作时过程较长，并非卡顿。
+    2、如果要统一数据集尺寸，则最好放在所有对图像的操作之前，初始化图像操作之后。这样更有利运行速度。
 
+    参数保存:
+    在获取颜色均值后会保一个参数文件'img_pretreatment.txt'记录参数,，如果数据集总量、第一个图像
+    """
 
-def imgCentreCut(filePath, savePath='./trainData/centre', block_size=256, detection=False):
-    '''
-    图像中心裁剪，适用于布匹类型判断
-    :param filePath: 图片路径
-    savePath:保存路径 如果为None则不保存直接返回cv对象数据
-    block_size:切割块大小
-    detection:是否进行边缘检测
-    :return:cv对象数据
-    '''
-    TRANSLATION = 256
-    fileName = filePath[filePath.rindex("/") + 1:]
-    fileName = fileName[:fileName.rindex(".jpg")] + ".png"
-    try:
-        img = cv.imread(filePath)
-        W, H, C = img.shape
-    except:
-        return 0
-    # img=cv.resize(img, (H*2, W * 2))
-    cen_img = img[(H - block_size) // 2:(H + block_size) // 2 + TRANSLATION,
-              (W - block_size) // 2 + TRANSLATION:(W + block_size) // 2 + TRANSLATION]
-    # PIL方法
-    # img = Image.open(filePath)
-    # (H, W) = img.size
-    # cen_img = img.crop(((H - block_size) / 2, (W - block_size) / 2, (H + block_size) / 2, (W + block_size) / 2))
-    if detection is True:
-        # cen_img=cannyPIL(cen_img)
-        cen_img = cv.Scharr(cen_img, -1, 1, 0)
-    cen_img = cen_img[:32, :32]
+    def __init__(self, all_img_path, mean_color_num=500, img_expected_size=None, img_type="jpg", read_img_type='L',
+                 ignore_log=False, debug=True):
+        """
+        :param all_img_path: 图像文件路径
+        :param mean_color_num:颜色均值采样数
+        :paramimg_expected_size:期望的数据集图像统一的尺寸
+        :param img_type: 图像文件类型，默认jpg格式
+        :param read_img_type:图像读取通道类型 默认为灰度
+        :param ignore_log:是否忽略之前参数文件
+        """
 
-    if savePath is None:
-        return cen_img
-    else:
-        # cen_img.save(savePath + fileName, 'png')
-        cv.imwrite(savePath + "/" + fileName, cen_img, [int(cv.IMWRITE_PNG_COMPRESSION), 9])
+        print(debug and "----------ImgPretreatment Start!----------")
+        self.len_img = len(all_img_path)
+        self.img_file_path = readIMGInDir(all_img_path, img_type)
+        self.mean_color_num = mean_color_num
+        self.img_type = img_type
+        self.read_img_type = read_img_type
+        self.debug = debug
+        self.img_expected_size = img_expected_size
 
+        self.shape = Image.open(self.img_file_path[0]).shape
+        # Flag 变量
 
-class imgdetection:
-    '''
-    瑕疵检测预处理
-    仅处理单个图片
-    '''
-    # 采样倍率
-    opt = [0.01, 0.065, 0.3, 0.8, 1, 1.4, 2]
+        self.color_mean_flag = False
+        if ignore_log is False:
+            try:
+                with open("./img_pretreatment.txt", "r", encoding="utf-8") as f:
+                    info = f.read().split("-")
+                    if (info[0] == self.read_img_type and info[1] == self.len_img and info[2] == self.mean_color_num and
+                            info[3] == self.img_expected_size):
+                        self.color_mean_flag = True
+                        print(debug and "Load Log Successfully!")
+            except:
+                pass
+        # 当前进程变量
+        self.now_index = 1
+        self.now_img_obj = Image.open(self.img_file_path[0])
+        print(debug and "Data Read Successfully Number:", self.len_img)
 
-    def __init__(self, imgFilePath, opt=None):
-        self.imgFilePath = imgFilePath
-        self.img = cv.imread(imgFilePath, 0)
-        if opt is not None:
-            self.opt = opt
+    def img_init(self, index):
+        """
+        图像初始化
+        :param index: 需要初始化图像的索引
+        :return:
+        """
+        if index is not self.now_index:
+            try:
+                self.now_img_obj = Image.open(self.img_file_path[0]).convert(self.read_img_type)
+                self.now_index = index
+            except:
+                print(traceback.format_exc())
 
-    def _imgresize(self, size_num):
-        '''
-        图像大小调整
-        :param size_num: 缩放倍数
-        :return: cv对象
-        '''
-        H, W = self.img.shape
-        img = cv.resize(self.img, (int(W * size_num), int(H * size_num)))
-        return img
+    def __color_mean_start(self):
+        """
+        颜色均值获取
+        :return:颜色均值
+        """
 
-    def _imgcanny(self, img):
-        '''
-        Canny边缘检测
-        :param img: cv对象
-        :return: cv对象
-        '''
-        # blur = cv.GaussianBlur(img, (3, 3), 0)  # 高斯滤波降噪   参数  内核 偏差
-        edge = cv.Canny(img, 30, 65)  # 30最小阈值 70最大阈值
-        return edge
+        sum_img_numpy = np.zeros((1, 1, 1), dtype=np.float)
+        if self.read_img_type is "L":
+            sum_img_numpy = np.zeros(1, dtype=np.float)
 
-    def detection(self):
-        '''
-        采样批处理工具
-        :return: 图像字典 {[int]采样倍数:cv对象}
-        '''
-        imgL = []
-        for i in self.opt:
-            img = self._imgresize(i)  # 调整大小
-            img = self._imgcanny(img)
-            imgL.append((i, img))
-        imgL = dict(imgL)
-        return imgL
+        self.__color_mean = [0, 0, 0]
+        mean_color_num = self.mean_color_num
+        success_num = 1
+        for id, imgP in enumerate(self.img_file_path):
+            im = Image.open(imgP).convert(self.read_img_type)
+            if self.shape is not im.shape:
+                mean_color_num += 1
+                continue
+            try:
+                sum_img_numpy += np.mean(np.asarray(im), axis=0)
+                success_num += 1
+            except:
+                print(traceback.format_exc())
+            if id == mean_color_num or id == self.len_img:
+                self.__color_mean = np.around((sum_img_numpy / success_num), decimals=3).tolist()
+                self.color_mean_flag = True
 
-    def edgeFind(self):
-        '''
-        :return: [4339, 4483, 0, 2400] 起始W位置，结束W位置，起始H，结束H
-        '''
+                with open("./img_pretreatment.txt", "w", encoding="utf-8") as f:
+                    f.write(
+                        str(self.read_img_type) + "-" + str(self.len_img) + "-" + str(self.mean_color_num) + "-" + str(
+                            self.img_expected_size))
+                if self.debug is True:
+                    print("Color Mean :", self.__color_mean)
+                    print("Write Log --Done!")
+                return self.__color_mean
 
-        img_cv_obj = self.detection()[self.opt[-1]]
-        H, W = img_cv_obj.shape
-        im = cv.resize(img_cv_obj, (1020, 500))
-        finalbox = [0, 0, 0, 0]
+    def img_cut_color(self):
+        self.now_img_obj = Image.fromarray(np.asarray(self.now_img_obj) - self._req_color_mean())
 
-        sumA = 0  # 计数器 超过指定值即为轮廓
-        for i in range(1000):
-            s = 0
-            for ii in range(150, 300):
-                if im[ii, i] != 0 and s <= 10:
-                    s += 1
-                    for iii in range(350, 400):
-                        if im[iii, i] != 0 and sumA <= 50:
-                            sumA += 1
-                        if sumA == 50:
-                            finalbox = [i - 30, i + 30, 0, 500]
-                            break
-        finalbox = [int(i * (W / 1020)) for i in finalbox]
-        return finalbox
+    def img_only_one_shape(self):
+        """
+        传入图片将修正为数据集统一的尺寸
+        :return:
+        """
+        pass
+        # 暂未设计算法
 
-    def roidel(self):
-        '''
-        去除布匹边缘
-        :return: 图像字典 {[int]采样倍数:cv对象}
-        '''
-        box = self.edgeFind()
-        imgL = []
-        for op in self.opt:
-            img_cv_obj = self.detection()[op]  # 取图片
-            # roi=[int(box[2]//2*op),int(box[3]//2*op), int(box[0]//2*op),int(box[1]//2*op)]
-            img_cv_obj[int(box[2] / 2 * op):int(box[3] / 2 * op), int(box[0] / 2 * op):int(box[1] / 2 * op)] = 0
-            imgL.append((op, img_cv_obj))
-        imgL = dict(imgL)
-        return imgL
+    def img_resize(self):
+        pass
 
-    def three2one(self):
-        '''
-        通道信息3合1
-        :return: cv对象
-        '''
-        img_1 = self.detection()[self.opt[1]]
-        img_2 = self.detection()[self.opt[2]]
-        img_3 = self.detection()[self.opt[3]]
-        H, W = img_3.shape
-        img_1 = cv.resize(img_1, (W, H))
-        img_2 = cv.resize(img_2, (W, H))
-        im = [img_1, img_2, img_3]
-        img = cv.merge(im)
-        return img
+    def req_final_img(self):
+        return self.now_img_obj
 
+    def _req_color_mean(self):
+        if self.color_mean_flag:
+            return self.__color_mean
+        else:
+            return self.__color_mean_start()
 
-def debugIMG(path):
-    '''
-    Debug-目录下的图片提取为指定类型
-    :param path: 图片目录
-    :return: None
-    '''
-    from train.osTools import mkdirL
-    # path="./trainData/ori/img/"
-    mkdirL(path, imgdetection.opt, de=True)
-    img_Name = readIMGInDir(path)
-    for i in img_Name:
-        '''
-        try:
-            a = imgdetection(i)
-            imgL = a.detection()
-            for ii in range(len(imgdetection.opt)):
-                p = path + str(imgdetection.opt[ii]) + "/" + str(i[i.rindex("/"):]) + '.jpg'
-                cv.imwrite(p, imgL[imgdetection.opt[ii]])
-            print(i, "--OK!")
-        except:
-            
-        '''
-        try:
-            a = imgdetection(i)
-            im = a.three2one()
-            cv.imshow("1", im)
-            cv.waitKey()
-        except:
-            print(traceback.format_exc())
-    print("Done")
+    def __len__(self):
+        return self.len_img
 
-
-# debugIMG("./trainData/ori2/")
 
 def cut_box_for_infer(img, quick=False):
-    '''
+    """
     GT-CutR模型 预测图片预处理工具
     :param img: PIL_Obj
     :param quick = False:极速模式 关闭
     :return: imgL 剪裁后图片列表
-    '''
+    """
     # 参数表
     boxsixe = [240, 240]  # 2倍的测试框
     input_img = (1200, 2448)  # 输入图片
     check_input = (2448, 1200)
-    assert (check_input == img.size), "输入图片不符合(1200, 2448)尺寸！"
+    assert (check_input == img.size), "输入图片" + str(img.size) + "不符合(2448,1200)尺寸！"
     vbox_input_img = [960, 2160]  # 虚拟图片大小
     ext = 0.  # ext: 扩充偏移量[0-0.5]
     extup = 0.  # extup:上下偏移量[0.3-1]
@@ -276,11 +231,11 @@ def cut_box_for_infer(img, quick=False):
         p = 2
         ext *= 0.5
 
-    '''
+    """
     选择框处理工具
     :param input_img: PIL对象
     :return: 小块图像列表
-    '''
+    """
     mini_imgL = []
     box_W = (2 * vbox_input_img[1]) // boxsixe[0]
     box_H = (2 * vbox_input_img[0]) // boxsixe[0]
@@ -300,24 +255,26 @@ def cut_box_for_infer(img, quick=False):
     return mini_imgL
 
 
-'''
+"""
 imgF="./testData/075353_1_0.jpg"
 img=Image.open(imgF)
 cut_box_for_infer(img)
-'''
+"""
 
 
-def drawIMG(dirP, imgname):
-    '''
-
+def drawIMG(dirP, imgname, quickMode=True):
+    """
+    图片绘制工具
     :param imgP:  图片文件路径
+    :param imgname:  图片文件名称
     :return: PIL对象
-    '''
+    """
     imgP = dirP + "/" + imgname
     labelP = dirP + "/info/" + imgname + ".txt"
     imgP = Image.open(imgP)
     vbox_input_img = [960, 2160]  # 虚拟图片大小
     imgP = imgP.crop((0, 120, vbox_input_img[1], vbox_input_img[0] + 120))
+    imgP = imgP.convert('RGB')
     draw = ImageDraw.Draw(imgP)
     with open(labelP, "r") as f:
         info = f.read().split("\n")[:-1]
@@ -327,9 +284,11 @@ def drawIMG(dirP, imgname):
             H = int(L[1]) - 1
             strL = L[2] + "/" + L[3]
             font = ImageFont.truetype(fontP, 15, encoding="utf-8")
-            draw.text((60 + 120 * W, 120 + 240 * H), strL, fill=200, font=font)
+            if quickMode is True:
+                draw.text((60 + 120 * W, 120 + 240 * H), strL, fill="red", font=font)
+            else:
+                draw.text((60 + 120 * W, 120 + 120 * H), strL, fill="red", font=font)
     return imgP
 
-
-a = drawIMG("./testData", "222443_1_5Y.jpg")
-a.show()
+# a = drawIMG("./test", "005746_2_2.jpg")
+# a.show()

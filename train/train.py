@@ -25,12 +25,11 @@ LEARNING_RATE = 0.0005  # 学习率
 # 指定路径
 # 路径除root外均不带"/"后缀
 path = './'
-baseModelPath = path + "model/defectBase"
+baseModelPath = path + "model/defectBase"  # 模型保存路径
 data_path = path + "data"
-train_imgPath = data_path + "/train"
-test_imgPath = data_path + "/test"
+train_imgPath = data_path + "/train"  # 训练集路径
+test_imgPath = data_path + "/test"  # 测试集路径
 
-labelFilePath = path + 'trainData/Classified/label.txt'
 print("模型文件夹路径" + baseModelPath)
 
 # 参数初始化
