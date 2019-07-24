@@ -3,9 +3,15 @@ ImgTool
 处理图片工具集合
 '''
 import os
-from PIL import Image, ImageFont, ImageDraw
-import numpy as np
+import sys
+import random
+import time
 import traceback
+
+from PIL import Image, ImageFont, ImageDraw, ImageEnhance
+import numpy as np
+
+
 
 fontP = "./font/1.ttf"
 
@@ -14,7 +20,7 @@ def readIMGInDir(path, type=None, onle_name=False):
     """
     读取文件夹下所有文件的文件名和路径
     :param path: 路径
-    type:指定文件类型，如果没有指定则视为jpg类型
+    :param type:指定文件类型，如果没有指定则视为jpg类型
     :return: nameL:文件夹内所有路径+文件名 './trainData/ori1/20181024/000030_1_0.jpg' or '000030_1_0.jpg'
     """
     if type is None:
@@ -62,6 +68,35 @@ def saveIMGFilePathL(dirPath, savePath, oriIMGType="jpg", for_test=False):
 
 # saveIMGFilePathL("./trainData/20181024/out", "./trainData/20181024/out", for_test=True)
 
+
+def read_img_in_dir(path, dir_deep=0, ext=None, name_none_ext=False):
+    """
+    读取文件夹下所有文件的文件名和路径
+    :param path: 路径
+    :param dir_deep:文件夹检索深度，默认为0
+    :param ext:指定文件类型，如果没有指定则视为jpg类型
+    :param name_none_ext:如果为True则返回的文件名列表中不含有扩展名
+    :return: nameL:文件夹内所有路径+文件名 './trainData/ori1/20181024/000030_1_0.jpg' , '000030_1_0.jpg' or '000030_1_0'
+    """
+    if ext is None:
+        ext = '.jpg'
+    else:
+        ext = "." + ext
+    name_list = []  # 保存文件名
+    name_path = []
+    for id_, (root, dirs, files) in enumerate(os.walk(path)):
+        for file in files:
+            if os.path.splitext(file)[1] == ext:
+                if name_none_ext is True:
+                    name_list.append(os.path.splitext(file)[0])
+                else:
+                    name_list.append(file)
+                name_path.append(str(os.path.join(root, file)).replace("\\", "/"))
+        if id_ == dir_deep:
+            break
+    return name_list, name_path
+
+
 class ImgPretreatment:
     """
 
@@ -80,64 +115,78 @@ class ImgPretreatment:
             tool_img_pretreatment.img_xxx()
             ...
             # 获取最终处理好的图像(Pillow对象)
-            final_img_pil_obj = tool_img_pretreatment.req_final_img()
+            final_img_pil_obj = tool_img_pretreatment.req_img()
 
     Tips:
     1、第一次进行图像减颜色均值操作时过程较长，并非卡顿。
     2、如果要统一数据集尺寸，则最好放在所有对图像的操作之前，初始化图像操作之后。这样更有利运行速度。
-
     参数保存:
-    在获取颜色均值后会保一个参数文件'img_pretreatment.txt'记录参数,，如果数据集总量、第一个图像
+    在获取颜色均值后会保一个参数文件'img_pretreatment.txt'记录参数。
+    参数读取仅在for_test=True或ignore_log=False时生效，
     """
 
-    def __init__(self, all_img_path, mean_color_num=500, img_expected_size=None, img_type="jpg", read_img_type='L',
-                 ignore_log=False, debug=True):
+    def __init__(self, all_img_path, mean_color_num=500, dir_deep=0, img_expected_cut_size=None,
+                 img_expected_resize=None, img_type="jpg", read_img_type='L', ignore_log=False, for_test=False,
+                 debug=True):
         """
         :param all_img_path: 图像文件路径
         :param mean_color_num:颜色均值采样数
-        :paramimg_expected_size:期望的数据集图像统一的尺寸
+        :param img_expected_cut_size:期望的数据集图像统一的尺寸
+        :param img_expected_resize:期望将图像缩放之后的形状
         :param img_type: 图像文件类型，默认jpg格式
         :param read_img_type:图像读取通道类型 默认为灰度
         :param ignore_log:是否忽略之前参数文件
         """
+        if debug:
+            print("----------ImgPretreatment Start!----------")
 
-        print(debug and "----------ImgPretreatment Start!----------")
-        self.len_img = len(all_img_path)
-        self.img_file_path = readIMGInDir(all_img_path, img_type)
+        self.img_file_name, self.img_file_path = read_img_in_dir(all_img_path, dir_deep, img_type, name_none_ext=True)
+
+        self.len_img = len(self.img_file_path)
         self.mean_color_num = mean_color_num
         self.img_type = img_type
         self.read_img_type = read_img_type
         self.debug = debug
-        self.img_expected_size = img_expected_size
+        self.img_expected_cut_size = img_expected_cut_size
+        self.img_expected_resize = img_expected_resize
 
-        self.shape = Image.open(self.img_file_path[0]).shape
+        self.shape = Image.open(self.img_file_path[0]).size
         # Flag 变量
+        self.allow_save_flag = True  # 允许保存，如果进行去均值操作则不允许保存
+        self.__first_print_flag = True  # 是否第一次输出控制变量
 
         self.color_mean_flag = False
-        if ignore_log is False:
+        if ignore_log is False or for_test is True:
             try:
-                with open("./img_pretreatment.txt", "r", encoding="utf-8") as f:
+                with open("./img_pretreatment.txt", "r") as f:
                     info = f.read().split("-")
-                    if (info[0] == self.read_img_type and info[1] == self.len_img and info[2] == self.mean_color_num and
-                            info[3] == self.img_expected_size):
+                    check_info = str(self.read_img_type) + str(self.len_img) + str(self.mean_color_num) + str(
+                        self.img_expected_cut_size)
+                    if info[0] == check_info or for_test:
                         self.color_mean_flag = True
-                        print(debug and "Load Log Successfully!")
+                        self.__color_mean = float(info[1][1:-1])
+                        if debug:
+                            print("Load Log Successfully!")
             except:
-                pass
+                assert not for_test, "Load Log Finally! Place "
         # 当前进程变量
         self.now_index = 1
-        self.now_img_obj = Image.open(self.img_file_path[0])
-        print(debug and "Data Read Successfully Number:", self.len_img)
+        self.now_img_obj_list = []
+        self.now_img_obj_list.append(Image.open(self.img_file_path[0]).convert(self.read_img_type))
+        if debug:
+            print("Data read successfully number:", self.len_img)
 
     def img_init(self, index):
         """
         图像初始化
         :param index: 需要初始化图像的索引
-        :return:
         """
-        if index is not self.now_index:
+        self.allow_save_flag = True
+
+        if index is not self.now_index or len(self.now_img_obj_list) != 1:
             try:
-                self.now_img_obj = Image.open(self.img_file_path[0]).convert(self.read_img_type)
+                self.now_img_obj_list = []
+                self.now_img_obj_list.append(Image.open(self.img_file_path[index]).convert(self.read_img_type))
                 self.now_index = index
             except:
                 print(traceback.format_exc())
@@ -155,45 +204,139 @@ class ImgPretreatment:
         self.__color_mean = [0, 0, 0]
         mean_color_num = self.mean_color_num
         success_num = 1
-        for id, imgP in enumerate(self.img_file_path):
+        for id_, imgP in enumerate(self.img_file_path):
             im = Image.open(imgP).convert(self.read_img_type)
-            if self.shape is not im.shape:
+            if self.shape != im.size:
                 mean_color_num += 1
                 continue
-            try:
-                sum_img_numpy += np.mean(np.asarray(im), axis=0)
-                success_num += 1
-            except:
-                print(traceback.format_exc())
-            if id == mean_color_num or id == self.len_img:
+            sum_img_numpy += np.mean(np.asarray(im).reshape((1, im.size[0], im.size[1])))
+            success_num += 1
+            if id_ == mean_color_num or id_ == self.len_img - 1:
                 self.__color_mean = np.around((sum_img_numpy / success_num), decimals=3).tolist()
                 self.color_mean_flag = True
 
-                with open("./img_pretreatment.txt", "w", encoding="utf-8") as f:
+                with open("./img_pretreatment.txt", "w") as f:
                     f.write(
-                        str(self.read_img_type) + "-" + str(self.len_img) + "-" + str(self.mean_color_num) + "-" + str(
-                            self.img_expected_size))
+                        (str(self.read_img_type) + str(self.len_img) + str(self.mean_color_num) + str(
+                            self.img_expected_cut_size) + "-" + str(self.__color_mean)))
                 if self.debug is True:
                     print("Color Mean :", self.__color_mean)
                     print("Write Log --Done!")
                 return self.__color_mean
 
     def img_cut_color(self):
-        self.now_img_obj = Image.fromarray(np.asarray(self.now_img_obj) - self._req_color_mean())
+        temp_list = []
+        for now_img_obj in self.now_img_obj_list:
+            now_img_obj = Image.fromarray(np.asarray(now_img_obj) - self._req_color_mean())
+            temp_list.append(now_img_obj)
+        self.now_img_obj_list = temp_list
+        self.allow_save_flag = False
 
     def img_only_one_shape(self):
         """
         传入图片将修正为数据集统一的尺寸
-        :return:
         """
         pass
         # 暂未设计算法
 
     def img_resize(self):
+        """
+        调整图像大小
+
+        """
         pass
 
-    def req_final_img(self):
-        return self.now_img_obj
+    def random_crop(self):
+        pass
+
+    def img_rotate(self, angle_range=(0, 0), angle_step=1, transpose=False, only_transpose=False):
+        """
+        图像翻转
+        如果仅返回规则翻转，则不需要修改前两个参数
+        :param angle_range:
+        :param angle_step:
+        :param transpose:
+        :param only_transpose:
+        Tips:如果使用该模块，则只在最后获取时运行
+        """
+
+        def tran(ori_pil_obj, out_pil_list):
+            out_pil_list.append(ori_pil_obj.transpose(Image.FLIP_LEFT_RIGHT))
+            out_pil_list.append(ori_pil_obj.transpose(Image.FLIP_TOP_BOTTOM))
+
+        temp_list = list(self.now_img_obj_list)
+        if only_transpose is True:
+            for now_img_obj in self.now_img_obj_list:
+                tran(now_img_obj, temp_list)
+            self.now_img_obj_list = temp_list
+        else:
+            for now_img_obj in self.now_img_obj_list:
+                for angle in range(angle_range[0], angle_range[1], angle_step):
+                    temp_list.append(now_img_obj.rotate(angle))
+            if transpose is True:
+                self.now_img_obj_list = []
+                for now_img_obj in temp_list:
+                    tran(now_img_obj, self.now_img_obj_list)
+
+    def random_contrast(self,  ,lower=0.2, upper=1.8):
+
+        factor = random.uniform(lower, upper)
+        temp_list = list(self.now_img_obj_list)
+        for now_img_obj in self.now_img_obj_list:
+            img = ImageEnhance.Sharpness(self.now_img_obj_list)
+            img = img.enhance(factor)
+
+
+    def random_brightness(self, lower=0.6, upper=1.4):
+        factor = random.uniform(lower, upper)
+        img = ImageEnhance.Brightness(self.now_img_obj_list)
+        img = img.enhance(factor)
+        return img
+
+    def random_color(self, lower=0.6, upper=1.5):
+        factor = random.uniform(lower, upper)
+
+        img = ImageEnhance.Color(self.now_img_obj_list)
+        img = img.enhance(factor)
+        return img
+
+    def req_img(self, save_path=None):
+        """
+        获取当前处理进程中图片
+        :param save_path:如果保存图片，则需要提供保存路径
+        :return:PIL_Obj or PIL_Obj_List
+        """
+        self.__progress_print()
+        if self.debug and self.__first_print_flag:
+            print("The number of single image pre-processed is expected to be", len(self.now_img_obj_list))
+            print("The total number of pictures expected to be produced is ", self.len_img * len(self.now_img_obj_list))
+            self.__first_print_flag = False
+
+        if save_path is not None:
+            assert self.allow_save_flag, "Can not save F mode img! Please undo img_cut_color operation!"
+            folder = os.path.exists(save_path)
+            if not folder:
+                os.makedirs(save_path)
+            if len(self.now_img_obj_list) != 1:
+                for id_, img in enumerate(self.now_img_obj_list):
+                    img.save(
+                        os.path.join(save_path, self.img_file_name[self.now_index] + str(id_) + ".jpg").replace("\\",
+                                                                                                                "/"))
+            else:
+                self.now_img_obj_list[0].save(
+                    os.path.join(save_path, self.img_file_name[self.now_index] + ".jpg").replace("\\", "/"))
+        return self.now_img_obj_list
+
+    def __progress_print(self):
+        """
+        进度条工具  
+        """""
+        time.sleep(1)
+        percentage = (self.now_index+1) / self.len_img
+        stdout_obj = sys.stdout
+        stdout_obj.write('\rPercentage of progress:{:.2%}'.format(percentage))
+        if self.now_index == self.len_img-1:
+            print("\n----------ImgPretreatment Done!-----------\n")
 
     def _req_color_mean(self):
         if self.color_mean_flag:
@@ -203,6 +346,16 @@ class ImgPretreatment:
 
     def __len__(self):
         return self.len_img
+
+
+# 测试代码
+all_img_tool = ImgPretreatment(all_img_path="test/5", debug=True, ignore_log=True)
+for i in range(all_img_tool.len_img):
+    all_img_tool.img_init(i)
+    all_img_tool.img_rotate(only_transpose=True)
+    all_img_tool.img_cut_color()
+    # all_img_tool.req_img(save_path="./test/save")
+    all_img_tool.req_img()
 
 
 def cut_box_for_infer(img, quick=False):
@@ -290,5 +443,5 @@ def drawIMG(dirP, imgname, quickMode=True):
                 draw.text((60 + 120 * W, 120 + 120 * H), strL, fill="red", font=font)
     return imgP
 
-# a = drawIMG("./test", "005746_2_2.jpg")
+# a = drawIMG("./test/", "005746_2_2.jpg")
 # a.show()
