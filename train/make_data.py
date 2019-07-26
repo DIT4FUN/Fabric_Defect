@@ -1,6 +1,7 @@
 from PIL import Image
 import imgTool
 import osTools
+import random
 
 boxsixe = [240, 240]  # 测试框
 input_img = [1200, 2448]  # 输入图片
@@ -8,7 +9,87 @@ vbox_input_img = [960, 2160]  # 虚拟图片大小
 
 # 颜色对照表
 L2color = {0: 0, 38: 1, 75: 2, 113: 3, 14: 4, 52: 5, 89: 6, 57: 7, 128: 8, 19: 9, 94: 10}
-L2text = {0: "无", 1: "布匹外", 2: "正常", 3: "油污", 4: "浆斑", 5: "停车痕", 6: "糙纬", 7: "笔迹", 8: "横向", 9: "纵向", 10: "Other"}
+L2text = {0: "无", 1: "布匹外", 2: "正常", 3: "油污", 4: "浆斑", 5: "停车痕", 6: "糙纬", 7: "笔迹", 8: "横向", 9: "纵向",
+          10: "Other"}
+
+
+def filter_img(pil_obj, mask_pil_obj, box_size=(120, 1200), step_size=60):
+    """
+    过滤非布匹区域，返回切割后仅含有布匹的图像
+    :param mask_pil_obj: 蒙版图片的pil对象
+    :param step_size: 滑动窗口步长
+    :param box_size: 滑动窗口大小
+    :param pil_obj: 原始图片的pil对象
+    :return: 带瑕疵pil对象列表，完全正常Pillow列表
+    """
+
+    w, h = pil_obj.size
+    block_w_num = (w // box_size[0]) * (box_size[0] // step_size) - 1
+    pil_list1 = []
+    pil_list2 = []
+    pil_list3 = []
+    pil_list_true = []
+    pix_sum = box_size[0] * box_size[1]
+    flag = True  # 只提取纯正常图片
+    for id_w in range(block_w_num):
+        box = (int(id_w * step_size), 0, int(id_w * step_size) + box_size[0], box_size[1])
+        mini_img = pil_obj.crop(box)
+        mini_img_mask = mask_pil_obj.crop(box)
+        colors = mini_img_mask.getcolors()
+        try:
+            color_tag = [tag[1] for tag in colors]
+        except IndexError:
+            continue
+        colors_d = dict(((v, k) for (k, v) in colors))
+        if 0 in color_tag and 75 in color_tag:
+            colors_d[75] += colors_d[0]
+
+        if 38 not in color_tag:
+            # 布匹外区域过滤
+
+            if 75 in color_tag:
+                # 瑕疵过滤 pix_sum越小越严格
+                if 52 in color_tag and colors_d[75] / pix_sum >= 0.05:
+                    # 过滤停车痕
+                    pil_list1.append(mini_img)
+                    flag = False
+                if ((113 in color_tag or 14 in color_tag or 128 in color_tag or 89 in color_tag) and colors_d[75]
+                        / pix_sum >= 0.8):
+                    # 过滤 油污、浆斑、糙纬、横向
+                    pil_list2.append(mini_img)
+                    flag = False
+                if 19 in color_tag and colors_d[75] / pix_sum >= 0.8:
+                    pil_list3.append(mini_img)
+                    flag = False
+            if (75 in color_tag and 0 in color_tag and len(
+                    color_tag) == 2 and block_w_num * 0.45 < id_w < block_w_num * 0.55 and flag is True):
+                # 添加完全正常部分
+                pil_list_true.append(mini_img)
+
+    return pil_list1, pil_list2, pil_list3, pil_list_true
+
+
+def first_cut_box(path, save_path):
+    img_list = imgTool.read_img_in_dir(path, ext="png", name_none_ext=True)[0]
+    osTools.mkdir(save_path + "0", de=True)
+    osTools.mkdir(save_path + "1", de=True)
+    osTools.mkdir(save_path + "2", de=True)
+    osTools.mkdir(save_path + "3", de=True)
+
+    def save_img(pil_list, path_):
+        if len(pil_list) >= 1:
+            for id_, img in enumerate(pil_list):
+                img.save(path_ + "/" + str(file_name) + str(id_) + ".jpg")
+
+    for file_name in img_list:
+        mask_img = Image.open("./trainData/20181024/out/SegmentationClassPNG/" + str(file_name) + ".png").convert('L')
+        ori_img = Image.open("./trainData/20181024/out/JPEGImages/" + str(file_name) + ".jpg").convert('L')
+        all_pil_list = filter_img(ori_img, mask_img)
+        for type_id, one_pil_list in enumerate(all_pil_list):
+            save_img(one_pil_list, save_path + str(type_id))
+
+
+# first_cut_box("./trainData/20181024/out/SegmentationClassPNG", "./test/cut")
 
 
 def cut_box(img, mask, savePath, ext=0.5, extup=0.):
@@ -65,7 +146,7 @@ def cut_box(img, mask, savePath, ext=0.5, extup=0.):
     for id, mini_img in mask_mini_imgL.items():
         colors = mini_img.getcolors()
         color_num = len(colors)
-        colors = sorted(colors, key=lambda x: colors[0], reverse=True)
+        colors = sorted(colors, key=lambda x: x[0], reverse=True)
         colorsL = [i for i in colors[0]]
 
         max_num = 0.5  # 默认最大阈值
@@ -118,8 +199,8 @@ def make_data(path, savePath, ext=0.5, extup=0., de=True):
     print("Find", count, "datas --Done!")
 
 
-make_data('F:/Fabric_Defect2/train/trainData/20181024/out', 'F:/Fabric_Defect2/train/trainData/traindatas04', ext=0.0,
-          extup=0)
+# make_data('F:/Fabric_Defect2/train/trainData/20181024/out', 'F:/Fabric_Defect2/train/trainData/traindatas04', ext=0.0,
+#           extup=0)
 
 
 def clean_east_rain():
@@ -131,4 +212,24 @@ def clean_east_rain():
         with open(i, "w")as f:
             f.write(info)
 
+
 # clean_east_rain()
+
+def random_data(path, save_file_name, buffer_size=10):
+    _, file_list = imgTool.read_img_in_dir(path)
+    end_num = len(file_list)
+    random_list = []
+    with open("./" + str(save_file_name) + "test.info", "a+") as f:
+        for i in range(0, end_num, buffer_size):
+            if i // buffer_size == end_num // buffer_size - 1:
+                break
+            num = random.randint(i, i + buffer_size)
+            random_list.append(num)
+            f.writelines(str(file_list[num]) + "\n")
+    with open("./" + str(save_file_name) + "train.info", "a+") as f:
+        for i in range(end_num):
+            if i not in random_list:
+                f.writelines(str(file_list[i]) + "\n")
+
+
+random_data("./test/cut3", "726")

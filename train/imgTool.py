@@ -66,7 +66,7 @@ def saveIMGFilePathL(dirPath, savePath, oriIMGType="jpg", for_test=False):
 # saveIMGFilePathL("./trainData/20181024/out", "./trainData/20181024/out", for_test=True)
 
 
-def read_img_in_dir(path, dir_deep=0, ext=None, name_none_ext=False):
+def read_img_in_dir(path, dir_deep=0, ext='jpg', name_none_ext=False):
     """
     读取文件夹下所有文件的文件名和路径
     :param path: 路径
@@ -75,10 +75,7 @@ def read_img_in_dir(path, dir_deep=0, ext=None, name_none_ext=False):
     :param name_none_ext:如果为True则返回的文件名列表中不含有扩展名
     :return: nameL:文件夹内所有路径+文件名 './trainData/ori1/20181024/000030_1_0.jpg' , '000030_1_0.jpg' or '000030_1_0'
     """
-    if ext is None:
-        ext = '.jpg'
-    else:
-        ext = "." + ext
+    ext = "." + ext
     name_list = []  # 保存文件名
     name_path = []
     for id_, (root, dirs, files) in enumerate(os.walk(path)):
@@ -164,7 +161,7 @@ class ImgPretreatment:
                         if debug:
                             print("Load Log Successfully!")
             except:
-                assert not for_test, "Load Log Finally! Place "
+                assert not for_test, "Load Log Finally,Place check img_pretreatment.txt!"
         # 当前进程变量
         self.now_index = 1
         self.now_img_obj_list = []
@@ -415,20 +412,20 @@ class ImgPretreatment:
         return self.len_img
 
 
-# 测试代码
-all_img_tool = ImgPretreatment(all_img_path="test/1", debug=True, ignore_log=True)
-for i in range(all_img_tool.len_img):
-    all_img_tool.img_init(i)
-    # all_img_tool.img_rotate(only_transpose=True)
-    # all_img_tool.img_random_brightness()
-    # all_img_tool.img_random_contrast()
-    # all_img_tool.img_cut_color()
-    all_img_tool.img_resize(612, 300)
-    # all_img_tool.img_random_saturation()
-
-    all_img_tool.req_img(save_path="./test/save1")
-
-    # all_img_tool.req_img()
+# # 测试代码
+# all_img_tool = ImgPretreatment(all_img_path="test/1", debug=True, ignore_log=True)
+# for i in range(all_img_tool.len_img):
+#     all_img_tool.img_init(i)
+#     # all_img_tool.img_rotate(only_transpose=True)
+#     # all_img_tool.img_random_brightness()
+#     # all_img_tool.img_random_contrast()
+#     # all_img_tool.img_cut_color()
+#     all_img_tool.img_resize(612, 300)
+#     # all_img_tool.img_random_saturation()
+#
+#     all_img_tool.req_img(save_path="./test/save1")
+#
+#     # all_img_tool.req_img()
 
 
 def cut_box_for_infer(img, quick=False):
