@@ -134,7 +134,7 @@ class ImgPretreatment:
         if debug:
             print("----------ImgPretreatment Start!----------")
 
-        self.img_file_name, self.img_files_path = read_img_in_dir(all_img_path, dir_deep, img_type, name_none_ext=True)
+        self.img_files_name, self.img_files_path = read_img_in_dir(all_img_path, dir_deep, img_type, name_none_ext=True)
 
         self.len_img = len(self.img_files_path)
         self.mean_color_num = mean_color_num
@@ -164,6 +164,8 @@ class ImgPretreatment:
                 assert not for_test, "Load Log Finally,Place check img_pretreatment.txt!"
         # 当前进程变量
         self.now_index = 1
+        self.now_img_name=self.img_files_name[self.now_index]
+        self.now_img_file_path = self.img_files_path[self.now_index]
         self.now_img_obj_list = []
         self.now_img_obj_list.append(Image.open(self.img_files_path[0]).convert(self.read_img_type))
         if debug:
@@ -228,11 +230,23 @@ class ImgPretreatment:
         self.__need_color_cut_flag = True
         self.allow_save_flag = False
 
-    def img_only_one_shape(self, expect_h, expect_w):
+    def img_only_one_shape(self, expect_w, expect_h):
         """
         传入图片将修正为数据集统一的尺寸
+        注意！期望大小必须小于原始图片大小
         """
-        pass
+        temp_list = []
+        for now_img_obj in self.now_img_obj_list:
+            w, h = now_img_obj.size
+            assert (w - expect_w >= 0 or h - expect_h >= 0), (
+                "Expected values are larger than the original image size. Please adjust the expected values to be "
+                "smaller than the original size!")
+            box = ((w - expect_w) // 2, (h - expect_h) // 2,
+                   (w - expect_w) // 2 + expect_w, (h - expect_h) // 2 + expect_h)
+            img = now_img_obj.crop(box)
+            temp_list.append(img)
+        self.now_img_obj_list = temp_list
+        self.shape = temp_list[0].size
 
     def img_resize(self, expect_w, expect_h):
         """
@@ -378,11 +392,11 @@ class ImgPretreatment:
             if len(self.now_img_obj_list) != 1:
                 for id_, img in enumerate(self.now_img_obj_list):
                     img.save(
-                        os.path.join(save_path, self.img_file_name[self.now_index] + str(id_) + ".jpg").replace("\\",
+                        os.path.join(save_path, self.img_files_name[self.now_index] + str(id_) + ".jpg").replace("\\",
                                                                                                                 "/"))
             else:
                 self.now_img_obj_list[0].save(
-                    os.path.join(save_path, self.img_file_name[self.now_index] + ".jpg").replace("\\", "/"))
+                    os.path.join(save_path, self.img_files_name[self.now_index] + ".jpg").replace("\\", "/"))
         # 数据返回区域
         return self.now_img_obj_list
 
@@ -413,17 +427,18 @@ class ImgPretreatment:
 
 
 # # 测试代码
-# all_img_tool = ImgPretreatment(all_img_path="test/1", debug=True, ignore_log=True)
+# all_img_tool = ImgPretreatment(all_img_path="data/test", debug=True, ignore_log=True)
 # for i in range(all_img_tool.len_img):
 #     all_img_tool.img_init(i)
 #     # all_img_tool.img_rotate(only_transpose=True)
 #     # all_img_tool.img_random_brightness()
 #     # all_img_tool.img_random_contrast()
 #     # all_img_tool.img_cut_color()
-#     all_img_tool.img_resize(612, 300)
+#     # all_img_tool.img_resize(612, 300)
 #     # all_img_tool.img_random_saturation()
+#     all_img_tool.img_only_one_shape(10, 300)
 #
-#     all_img_tool.req_img(save_path="./test/save1")
+#     all_img_tool.req_img(save_path="./data/save1")
 #
 #     # all_img_tool.req_img()
 

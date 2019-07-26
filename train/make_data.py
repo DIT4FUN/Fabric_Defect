@@ -2,6 +2,7 @@ from PIL import Image
 import imgTool
 import osTools
 import random
+import shutil
 
 boxsixe = [240, 240]  # 测试框
 input_img = [1200, 2448]  # 输入图片
@@ -71,25 +72,21 @@ def filter_img(pil_obj, mask_pil_obj, box_size=(120, 1200), step_size=60):
 
 def first_cut_box(path, save_path):
     img_list = imgTool.read_img_in_dir(path, ext="png", name_none_ext=True)[0]
-    osTools.mkdir(save_path + "0", de=True)
-    osTools.mkdir(save_path + "1", de=True)
-    osTools.mkdir(save_path + "2", de=True)
-    osTools.mkdir(save_path + "3", de=True)
 
     def save_img(pil_list, path_):
         if len(pil_list) >= 1:
             for id_, img in enumerate(pil_list):
-                img.save(path_ + "/" + str(file_name) + str(id_) + ".jpg")
+                img.save(path_ + str(file_name) + str(id_) + ".jpg")
 
     for file_name in img_list:
         mask_img = Image.open("./trainData/20181024/out/SegmentationClassPNG/" + str(file_name) + ".png").convert('L')
         ori_img = Image.open("./trainData/20181024/out/JPEGImages/" + str(file_name) + ".jpg").convert('L')
         all_pil_list = filter_img(ori_img, mask_img)
         for type_id, one_pil_list in enumerate(all_pil_list):
-            save_img(one_pil_list, save_path + str(type_id))
+            save_img(one_pil_list, save_path + "/" + str(type_id))
 
 
-# first_cut_box("./trainData/20181024/out/SegmentationClassPNG", "./test/cut")
+# first_cut_box("./trainData/20181024/out/SegmentationClassPNG", "./data/cut")
 
 
 def cut_box(img, mask, savePath, ext=0.5, extup=0.):
@@ -215,21 +212,21 @@ def clean_east_rain():
 
 # clean_east_rain()
 
-def random_data(path, save_file_name, buffer_size=10):
-    _, file_list = imgTool.read_img_in_dir(path)
+def random_data(path, save_path, buffer_size=4):
+    name_list, file_list = imgTool.read_img_in_dir(path)
     end_num = len(file_list)
     random_list = []
-    with open("./" + str(save_file_name) + "test.info", "a+") as f:
-        for i in range(0, end_num, buffer_size):
-            if i // buffer_size == end_num // buffer_size - 1:
-                break
-            num = random.randint(i, i + buffer_size)
-            random_list.append(num)
-            f.writelines(str(file_list[num]) + "\n")
-    with open("./" + str(save_file_name) + "train.info", "a+") as f:
-        for i in range(end_num):
-            if i not in random_list:
-                f.writelines(str(file_list[i]) + "\n")
+
+    for i in range(0, end_num, buffer_size):
+        if i // buffer_size == end_num // buffer_size - 1:
+            break
+        num = random.randint(i, i + buffer_size - 1)
+        random_list.append(num)
+        shutil.copyfile(file_list[num], save_path + "/test/" + name_list[num])
+
+    for i in range(end_num):
+        if i not in random_list:
+            shutil.copyfile(file_list[i], save_path + "/train/" + name_list[i])
 
 
-random_data("./test/cut3", "726")
+random_data("./data/cut", "./data")

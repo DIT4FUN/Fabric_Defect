@@ -7,14 +7,14 @@ from paddle.fluid.layers.learning_rate_scheduler import _decay_step_counter
 from paddle.fluid.initializer import init_on_cpu
 from pylab import mpl
 from se_resnext import SE_ResNeXt50_32x4d
-from dataReader import dataReaderA
+
 
 mpl.rcParams['font.sans-serif'] = ['SimHei']  # 解决PIL显示乱码问题
 
 # 参数表
 # place = fluid.CUDAPlace(0)#GPU训练
 place = fluid.CPUPlace()  # CPU训练
-TRAIN_DATA_SHAPE = (1, 120, 120)
+TRAIN_DATA_SHAPE = (1, 30, 300)
 C, IMG_H, IMG_W = TRAIN_DATA_SHAPE  # 输入网络图像大小
 TRAINNUM = 1000  # 训练次数
 READIMG = 100  # 每次读取图片数量
