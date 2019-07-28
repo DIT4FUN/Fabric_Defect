@@ -128,7 +128,7 @@ class ImgPretreatment:
         :param img_type: 图像文件类型，默认jpg格式
         :param read_img_type:图像读取通道类型 默认为灰度
         :param ignore_log:是否忽略之前参数文件
-        :param for_test:是否用于测试
+        :param for_test:是否用于测试，如果用于测试则自动读取颜色裁剪信息
         :param debug:设置为False后将进入哑巴模式，什么信息都不会打印在屏幕上，报错信息除外
         """
         if debug:
@@ -137,6 +137,7 @@ class ImgPretreatment:
         self.img_files_name, self.img_files_path = read_img_in_dir(all_img_path, dir_deep, img_type, name_none_ext=True)
 
         self.len_img = len(self.img_files_path)
+        assert self.len_img != 0, "No file is in the folder."
         self.mean_color_num = mean_color_num
         self.img_type = img_type
         self.read_img_type = read_img_type
@@ -157,6 +158,7 @@ class ImgPretreatment:
                     check_info = str(self.read_img_type) + str(self.len_img) + str(self.mean_color_num)
                     if info[0] == check_info or for_test:
                         self.color_mean_flag = True
+                        self.allow_save_flag = False
                         self.__color_mean = float(info[1][1:-1])
                         if debug:
                             print("Load Log Successfully!")
@@ -164,7 +166,7 @@ class ImgPretreatment:
                 assert not for_test, "Load Log Finally,Place check img_pretreatment.txt!"
         # 当前进程变量
         self.now_index = 1
-        self.now_img_name=self.img_files_name[self.now_index]
+        self.now_img_name = self.img_files_name[1]
         self.now_img_file_path = self.img_files_path[self.now_index]
         self.now_img_obj_list = []
         self.now_img_obj_list.append(Image.open(self.img_files_path[0]).convert(self.read_img_type))
@@ -183,6 +185,7 @@ class ImgPretreatment:
                 self.now_img_obj_list = []
                 self.now_img_obj_list.append(Image.open(self.img_files_path[index]).convert(self.read_img_type))
                 self.now_index = index
+                self.now_img_name = self.img_files_name[self.now_index]
             except:
                 print(traceback.format_exc())
 
@@ -393,7 +396,7 @@ class ImgPretreatment:
                 for id_, img in enumerate(self.now_img_obj_list):
                     img.save(
                         os.path.join(save_path, self.img_files_name[self.now_index] + str(id_) + ".jpg").replace("\\",
-                                                                                                                "/"))
+                                                                                                                 "/"))
             else:
                 self.now_img_obj_list[0].save(
                     os.path.join(save_path, self.img_files_name[self.now_index] + ".jpg").replace("\\", "/"))
@@ -528,5 +531,28 @@ def drawIMG(dirP, imgname, quickMode=True):
                 draw.text((60 + 120 * W, 120 + 120 * H), strL, fill="red", font=font)
     return imgP
 
+
 # a = drawIMG("./test/", "005746_2_2.jpg")
 # a.show()
+
+def cut_edge(pil_l_obj, size=(600, 1200), step_size=200):
+    """
+    裁剪布匹图片，并剪去边缘
+    :param pil_l_obj: pil灰度对象
+    :param size: block大小
+    :param step_size: 步长
+    :return: pil灰度对象
+    """
+    w, h = pil_l_obj.size
+    block_num = w // step_size - size[0]//step_size
+    pil_list = []
+    for i in range(1, block_num):
+        box = (i * step_size, 0, size[0] + i * step_size, 1200)
+        mini_img = pil_l_obj.crop(box)
+        colors = mini_img.getcolors()
+        if colors[0][1] > 60:
+            pil_list.append(mini_img)
+    return pil_list
+
+# img = Image.open("./testData/160342_3_5Y.jpg").convert('L')
+# cut_edge(img)

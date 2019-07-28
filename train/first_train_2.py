@@ -1,9 +1,8 @@
 import paddle.fluid as fluid
 import paddle
 import numpy as np
-from PIL import Image
 from pylab import mpl
-from resnet import ResNet18
+from resnet import ResNet34
 from imgTool import ImgPretreatment
 
 mpl.rcParams['font.sans-serif'] = ['SimHei']  # 解决PIL显示乱码问题
@@ -12,7 +11,7 @@ mpl.rcParams['font.sans-serif'] = ['SimHei']  # 解决PIL显示乱码问题
 place = fluid.CUDAPlace(0)  # GPU训练
 C, IMG_H, IMG_W = 1, 30, 300
 TRAIN_NUM = 1000  # 训练次数
-READIMG = 10  # 每次读取图片数量
+READIMG = 500  # 每次读取图片数量
 class_dim = 2  # 分类总数
 LEARNING_RATE = 0.0005  # 学习率
 
@@ -20,10 +19,10 @@ LEARNING_RATE = 0.0005  # 学习率
 # 路径除root外均不带"/"后缀
 path = './'
 base_model_path = path + "model/defectBase"  # 模型保存路径
-params_path = path + "model/ResNet18_pretrained"
+params_path = path + "model/ResNet34_pretrained"
 data_path = path + "data"
 train_img_path = data_path + "/train"  # 训练图片路径
-test_img_path = data_path + "/7test"  # 测试图片路径
+test_img_path = data_path + "/test"  # 测试图片路径
 
 print("模型文件夹路径" + base_model_path)
 
@@ -56,7 +55,7 @@ def data_reader(for_test=False):
                     img = np.array(img).reshape(1, 30, 300).astype(np.float32)
                     yield img, label
         else:
-            img_tool = ImgPretreatment(train_img_path, for_test=True)
+            img_tool = ImgPretreatment(test_img_path, for_test=True)
             for index in range(img_tool.len_img):
                 img_tool.img_init(index)
                 img_tool.img_only_one_shape(120, 1200)
@@ -86,7 +85,8 @@ startup = fluid.Program()  # 默认启动程序
 with fluid.program_guard(main_program=first_program, startup_program=startup):
     image = fluid.layers.data(name="image", shape=[C, IMG_H, IMG_W], dtype='float32')
     label = fluid.layers.data(name='label', shape=[1], dtype='int64')
-    net_x = ResNet18().net(input=image, class_dim=class_dim)
+    net_x = ResNet34().net(input=image, class_dim=class_dim)
+    net_x =fluid.layers.fc(input=net_x,size=2,act="softmax")
     # 定义损失函数
     cost = fluid.layers.cross_entropy(net_x, label)
     avg_cost = fluid.layers.mean(cost)
@@ -136,7 +136,7 @@ for train_num, i in enumerate(range(TRAIN_NUM)):
         outs = exe.run(program=first_program,
                        feed=train_feeder.feed(data),
                        fetch_list=[acc_1, acc_1, cost])
-        print("Train step:", train_num, batch_id, "Acc", outs[0], outs[1], 'Cost:', sum(outs[2]) / len(outs[2]))
+        # print("Train step:", train_num, batch_id, "Acc", outs[0], outs[1], 'Cost:', sum(outs[2]) / len(outs[2]))
         try:
             sumacc1.append(float(outs[0]))
             sumacc5.append(float(outs[1]))
@@ -147,7 +147,7 @@ for train_num, i in enumerate(range(TRAIN_NUM)):
         t_outs = exe.run(program=testProgram,
                          feed=test_feeder.feed(data),
                          fetch_list=[acc_1, acc_1, cost])
-        print("Test: Acc", t_outs[0], t_outs[1], 'Cost:', sum(t_outs[2]) / len(t_outs[2]))
+        # print("Test: Acc", t_outs[0], t_outs[1], 'Cost:', sum(t_outs[2]) / len(t_outs[2]))
         try:
             t_sumacc1.append(float(t_outs[0]))
             t_sumacc5.append(float(t_outs[1]))
@@ -172,19 +172,14 @@ for train_num, i in enumerate(range(TRAIN_NUM)):
     t_costL.append(sum(t_sumcost) / len(t_sumcost))
     print(train_num, "Acc", avgacc, avgacc5, "TAcc", t_avgacc, t_avgacc5, tcost)
 
-    if avgacc > maxAcc:
-        maxAcc = avgacc
-        fluid.io.save_inference_model(dirname=base_model_path + str(train_num) + "Train" + str(int(maxAcc * 100)),
-                                      feeded_var_names=["image"], target_vars=[net_x], main_program=first_program,
-                                      executor=exe)
-    if t_avgacc > t_maxAcc:
-        t_maxAcc = t_avgacc
-        fluid.io.save_inference_model(dirname=base_model_path + str(train_num) + "Test" + str(int(t_maxAcc * 100)),
-                                      feeded_var_names=["image"], target_vars=[net_x], main_program=first_program,
-                                      executor=exe)
+    fluid.io.save_inference_model(dirname=base_model_path + str(train_num) + "Train" + str(
+        int(avgacc * 100)) + "Test" + str(int(t_avgacc * 100)),
+                                  feeded_var_names=["image"], target_vars=[net_x], main_program=first_program,
+                                  executor=exe)
+
     if train_num % 100 == 99:
         fluid.io.save_persistables(dirname=base_model_path + str(train_num) + "persistables", executor=exe,
                                    main_program=first_program)
-with open(path + "traindatalog.txt", "w") as f:
-    f.writelines(
-        str(accL1) + "," + str(accL5) + "," + str(t_accL1) + "," + str(t_accL5) + "," + str(costL) + "," + str(t_costL))
+    with open(path + "traindatalog.txt", "a") as f:
+        f.writelines(
+            str(accL1) + "," + str(accL5) + "," + str(t_accL1) + "," + str(t_accL5) + "," + str(costL) + "," + str(t_costL))

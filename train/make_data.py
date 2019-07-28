@@ -14,7 +14,7 @@ L2text = {0: "无", 1: "布匹外", 2: "正常", 3: "油污", 4: "浆斑", 5: "�
           10: "Other"}
 
 
-def filter_img(pil_obj, mask_pil_obj, box_size=(120, 1200), step_size=60):
+def filter_img(pil_obj, mask_pil_obj, box_size=(600, 1200), step_size=150):
     """
     过滤非布匹区域，返回切割后仅含有布匹的图像
     :param mask_pil_obj: 蒙版图片的pil对象
@@ -25,7 +25,7 @@ def filter_img(pil_obj, mask_pil_obj, box_size=(120, 1200), step_size=60):
     """
 
     w, h = pil_obj.size
-    block_w_num = (w // box_size[0]) * (box_size[0] // step_size) - 1
+    block_w_num = (w // box_size[0] - 1) * (box_size[0] // step_size)
     pil_list1 = []
     pil_list2 = []
     pil_list3 = []
@@ -213,6 +213,13 @@ def clean_east_rain():
 # clean_east_rain()
 
 def random_data(path, save_path, buffer_size=4):
+    """
+    划分数据集
+    :param path: 图片所在的文件夹
+    :param save_path: 保存文件夹
+    :param buffer_size: 随机步长
+    :return:
+    """
     name_list, file_list = imgTool.read_img_in_dir(path)
     end_num = len(file_list)
     random_list = []
