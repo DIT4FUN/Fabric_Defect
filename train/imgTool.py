@@ -256,7 +256,6 @@ class ImgPretreatment:
         多相位调整图像大小
         :param expect_w: 期望的宽度-横向
         :param expect_h: 期望的高度-纵向
-        :return:
         """
         temp_list = []
         for now_img_obj in self.now_img_obj_list:
@@ -535,7 +534,7 @@ def drawIMG(dirP, imgname, quickMode=True):
 # a = drawIMG("./test/", "005746_2_2.jpg")
 # a.show()
 
-def cut_edge(pil_l_obj, size=(600, 1200), step_size=200):
+def cut_edge(pil_l_obj, size=(600, 1200), step_size=300):
     """
     裁剪布匹图片，并剪去边缘
     :param pil_l_obj: pil灰度对象
@@ -544,15 +543,17 @@ def cut_edge(pil_l_obj, size=(600, 1200), step_size=200):
     :return: pil灰度对象
     """
     w, h = pil_l_obj.size
-    block_num = w // step_size - size[0]//step_size
+    block_num = (w // step_size - 1) * (size[0] // step_size)
     pil_list = []
-    for i in range(1, block_num):
+    box_list = []
+    for i in range(block_num):
         box = (i * step_size, 0, size[0] + i * step_size, 1200)
         mini_img = pil_l_obj.crop(box)
         colors = mini_img.getcolors()
         if colors[0][1] > 60:
             pil_list.append(mini_img)
-    return pil_list
+            box_list.append(box)
+    return pil_list, box_list
 
 # img = Image.open("./testData/160342_3_5Y.jpg").convert('L')
 # cut_edge(img)

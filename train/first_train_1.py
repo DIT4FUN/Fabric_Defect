@@ -95,8 +95,8 @@ with fluid.program_guard(main_program=first_program, startup_program=startup):
     # 动态测试程序
     testProgram = first_program.clone(for_test=True)
     # 定义优化方法
-    adma_optimizer = fluid.optimizer.Adam(learning_rate=LEARNING_RATE)
-    adma_optimizer.minimize(avg_cost)
+    adam_optimizer = fluid.optimizer.Adam(learning_rate=LEARNING_RATE)
+    adam_optimizer.minimize(avg_cost)
 
 # 数据传入设置
 
